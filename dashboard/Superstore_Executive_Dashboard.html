@@ -1,0 +1,941 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Superstore Executive Dashboard — CEO & CFO Command Center</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+:root {
+  --blue:#2563EB; --blue-lt:#EFF6FF; --blue-dk:#1E40AF;
+  --green:#059669; --green-lt:#ECFDF5; --green-dk:#065F46;
+  --amber:#D97706; --amber-lt:#FFFBEB; --amber-dk:#92400E;
+  --coral:#DC4A3D; --coral-lt:#FEF2F2;
+  --teal:#0D9488; --teal-lt:#F0FDFA;
+  --purple:#7C3AED; --purple-lt:#F5F3FF;
+  --gray1:#F8FAFC; --gray2:#F1F5F9; --gray3:#E2E8F0;
+  --gray4:#CBD5E1; --gray5:#94A3B8; --gray6:#64748B;
+  --gray7:#475569; --gray8:#334155; --gray9:#1E293B;
+  --text:#0F172A; --border:#E2E8F0;
+  --card-shadow: 0 1px 3px rgba(0,0,0,.06), 0 1px 2px rgba(0,0,0,.04);
+  --radius:10px;
+}
+*, *::before, *::after { box-sizing:border-box; margin:0; padding:0; }
+html { font-size:14px; }
+body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background:#F8FAFC; color:var(--text); min-height:100vh; }
+
+/* ── HEADER ── */
+.header {
+  background:#fff; border-bottom:1px solid var(--border);
+  padding:14px 24px; display:flex; align-items:center; justify-content:space-between;
+  position:sticky; top:0; z-index:100;
+}
+.header-left { display:flex; align-items:center; gap:12px; }
+.logo-badge {
+  background:var(--blue); color:#fff; font-size:11px; font-weight:700;
+  letter-spacing:.08em; padding:5px 10px; border-radius:6px; text-transform:uppercase;
+}
+.header-title { font-size:16px; font-weight:700; color:var(--gray9); }
+.header-sub { font-size:12px; color:var(--gray6); margin-top:1px; }
+.header-right { display:flex; align-items:center; gap:12px; }
+.live-pill {
+  display:flex; align-items:center; gap:6px;
+  background:var(--green-lt); border:1px solid #A7F3D0;
+  color:var(--green-dk); font-size:11px; font-weight:600;
+  padding:4px 10px; border-radius:20px;
+}
+.live-dot { width:6px; height:6px; border-radius:50%; background:var(--green); animation:pulse 2s infinite; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+.date-badge { font-size:12px; color:var(--gray6); background:var(--gray2); padding:4px 10px; border-radius:6px; }
+
+/* ── FILTER BAR ── */
+.filter-bar {
+  background:#fff; border-bottom:1px solid var(--border);
+  padding:10px 24px; display:flex; align-items:flex-end; gap:14px; flex-wrap:wrap;
+}
+.filter-group { display:flex; flex-direction:column; gap:3px; }
+.filter-label { font-size:10px; font-weight:600; color:var(--gray6); text-transform:uppercase; letter-spacing:.06em; }
+.filter-select {
+  font-size:12px; font-weight:500; color:var(--gray8);
+  background:#fff; border:1.5px solid var(--gray3);
+  padding:6px 28px 6px 10px; border-radius:7px; cursor:pointer; outline:none;
+  appearance:none; -webkit-appearance:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%2394A3B8' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat:no-repeat; background-position:right 9px center; min-width:130px;
+  transition:border-color .15s;
+}
+.filter-select:hover { border-color:var(--blue); }
+.filter-select:focus { border-color:var(--blue); box-shadow:0 0 0 3px rgba(37,99,235,.1); }
+.filter-divider { width:1px; height:36px; background:var(--gray3); align-self:flex-end; margin:0 2px; }
+.btn-reset {
+  font-size:12px; font-weight:600; color:var(--gray7);
+  background:#fff; border:1.5px solid var(--gray3);
+  padding:7px 14px; border-radius:7px; cursor:pointer;
+  display:flex; align-items:center; gap:5px; transition:all .15s; align-self:flex-end;
+}
+.btn-reset:hover { border-color:var(--coral); color:var(--coral); background:var(--coral-lt); }
+.filter-info { font-size:11px; color:var(--gray5); align-self:flex-end; padding-bottom:1px; }
+
+/* ── LAYOUT ── */
+.main { padding:20px 24px; max-width:1600px; margin:0 auto; }
+
+/* ── KPI ROW ── */
+.kpi-row { display:grid; grid-template-columns:repeat(6,1fr); gap:12px; margin-bottom:18px; }
+.kpi-card {
+  background:#fff; border:1px solid var(--border); border-radius:var(--radius);
+  padding:16px 18px; position:relative; overflow:hidden;
+  box-shadow:var(--card-shadow); transition:box-shadow .15s;
+}
+.kpi-card:hover { box-shadow:0 4px 12px rgba(0,0,0,.08); }
+.kpi-card::before {
+  content:''; position:absolute; top:0; left:0; right:0; height:3px; border-radius:var(--radius) var(--radius) 0 0;
+}
+.kpi-card.blue::before { background:var(--blue); }
+.kpi-card.green::before { background:var(--green); }
+.kpi-card.amber::before { background:var(--amber); }
+.kpi-card.teal::before { background:var(--teal); }
+.kpi-card.purple::before { background:var(--purple); }
+.kpi-card.coral::before { background:var(--coral); }
+
+.kpi-icon { font-size:18px; margin-bottom:8px; }
+.kpi-label { font-size:10px; font-weight:700; color:var(--gray5); text-transform:uppercase; letter-spacing:.07em; margin-bottom:4px; }
+.kpi-value { font-size:26px; font-weight:800; color:var(--gray9); line-height:1; margin-bottom:6px; }
+.kpi-delta { display:flex; align-items:center; gap:4px; font-size:11px; font-weight:600; }
+.kpi-delta.up { color:var(--green); }
+.kpi-delta.down { color:var(--coral); }
+.kpi-delta.neutral { color:var(--gray5); }
+.kpi-note { font-size:10px; color:var(--gray5); margin-top:2px; }
+
+/* ── SECTION LABEL ── */
+.section-row { display:flex; align-items:center; gap:8px; margin-bottom:12px; margin-top:4px; }
+.section-label { font-size:11px; font-weight:700; color:var(--gray6); text-transform:uppercase; letter-spacing:.08em; }
+.section-line { flex:1; height:1px; background:var(--gray3); }
+
+/* ── CHART GRID ── */
+.chart-grid { display:grid; gap:14px; }
+.grid-12 { grid-template-columns: 1fr; }
+.grid-6-6 { grid-template-columns: 1fr 1fr; }
+.grid-8-4 { grid-template-columns: 2fr 1fr; }
+.grid-4-4-4 { grid-template-columns: 1fr 1fr 1fr; }
+.grid-7-5 { grid-template-columns:7fr 5fr; }
+.grid-5-7 { grid-template-columns:5fr 7fr; }
+
+.chart-card {
+  background:#fff; border:1px solid var(--border);
+  border-radius:var(--radius); padding:18px 20px;
+  box-shadow:var(--card-shadow);
+}
+.chart-header { margin-bottom:14px; }
+.chart-title { font-size:13px; font-weight:700; color:var(--gray9); margin-bottom:2px; }
+.chart-subtitle { font-size:11px; color:var(--gray5); }
+.chart-canvas-wrap { position:relative; }
+
+/* ── LEGEND ── */
+.legend { display:flex; flex-wrap:wrap; gap:12px; margin-bottom:10px; }
+.legend-item { display:flex; align-items:center; gap:5px; font-size:11px; color:var(--gray7); font-weight:500; }
+.legend-swatch { width:10px; height:10px; border-radius:2px; flex-shrink:0; }
+
+/* ── HEATMAP ── */
+.heatmap-table { width:100%; border-collapse:collapse; font-size:12px; }
+.heatmap-table th { padding:8px 10px; text-align:center; font-weight:700; color:var(--gray6); font-size:10px; text-transform:uppercase; letter-spacing:.05em; border-bottom:1px solid var(--border); }
+.heatmap-table td { padding:10px 12px; text-align:center; border:1px solid var(--gray3); font-weight:600; font-size:12px; }
+.heatmap-table .row-label { text-align:left; font-weight:700; color:var(--gray8); background:var(--gray1); border-left:none; }
+
+/* ── INSIGHTS PANEL ── */
+.insights-panel {
+  background:linear-gradient(135deg,#EFF6FF 0%,#F0FDFA 100%);
+  border:1px solid #BFDBFE; border-radius:var(--radius);
+  padding:18px 22px; margin-top:14px;
+}
+.insights-header { display:flex; align-items:center; gap:8px; margin-bottom:12px; }
+.insights-title { font-size:13px; font-weight:800; color:var(--blue-dk); }
+.insights-badge {
+  font-size:10px; font-weight:700; background:var(--blue); color:#fff;
+  padding:2px 8px; border-radius:10px; letter-spacing:.04em;
+}
+.insights-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:14px; }
+.insight-item { background:#fff; border:1px solid #BFDBFE; border-radius:8px; padding:12px 14px; }
+.insight-icon { font-size:16px; margin-bottom:6px; }
+.insight-item-label { font-size:10px; font-weight:700; color:var(--gray6); text-transform:uppercase; letter-spacing:.06em; margin-bottom:4px; }
+.insight-item-val { font-size:16px; font-weight:800; color:var(--gray9); margin-bottom:3px; }
+.insight-item-desc { font-size:11px; color:var(--gray6); line-height:1.4; }
+
+/* ── CFO ALERTS ── */
+.cfo-alerts { margin-top:14px; }
+.alert-row { display:flex; gap:12px; flex-wrap:wrap; }
+.alert-card {
+  flex:1; min-width:220px;
+  border-radius:8px; padding:12px 14px;
+  display:flex; align-items:flex-start; gap:10px;
+}
+.alert-card.warn { background:#FFFBEB; border:1px solid #FDE68A; }
+.alert-card.danger { background:#FEF2F2; border:1px solid #FECACA; }
+.alert-card.info { background:#EFF6FF; border:1px solid #BFDBFE; }
+.alert-card.success { background:#ECFDF5; border:1px solid #A7F3D0; }
+.alert-icon { font-size:16px; flex-shrink:0; margin-top:1px; }
+.alert-title { font-size:11px; font-weight:800; color:var(--gray9); margin-bottom:3px; }
+.alert-desc { font-size:11px; color:var(--gray7); line-height:1.5; }
+
+/* ── FOOTER ── */
+.footer { text-align:center; padding:20px; font-size:11px; color:var(--gray5); border-top:1px solid var(--border); margin-top:20px; background:#fff; }
+
+/* ── LOADING ── */
+#loading-overlay {
+  position:fixed; inset:0; background:rgba(248,250,252,.95);
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  z-index:999; gap:14px;
+}
+.loading-spinner {
+  width:40px; height:40px; border:3px solid var(--gray3);
+  border-top-color:var(--blue); border-radius:50%; animation:spin .8s linear infinite;
+}
+@keyframes spin { to{transform:rotate(360deg)} }
+.loading-text { font-size:14px; font-weight:600; color:var(--gray7); }
+
+@media(max-width:1200px) {
+  .kpi-row{grid-template-columns:repeat(3,1fr);}
+  .grid-6-6,.grid-8-4,.grid-7-5,.grid-5-7{grid-template-columns:1fr;}
+  .grid-4-4-4{grid-template-columns:1fr 1fr;}
+  .insights-grid{grid-template-columns:1fr 1fr;}
+}
+@media(max-width:768px) {
+  .kpi-row{grid-template-columns:repeat(2,1fr);}
+  .grid-4-4-4{grid-template-columns:1fr;}
+  .insights-grid{grid-template-columns:1fr;}
+  .main{padding:12px;}
+  .header,.filter-bar{padding:10px 14px;}
+}
+</style>
+</head>
+<body>
+
+<div id="loading-overlay">
+  <div class="loading-spinner"></div>
+  <div class="loading-text">Loading Executive Dashboard...</div>
+</div>
+
+<!-- HEADER -->
+<header class="header">
+  <div class="header-left">
+    <div class="logo-badge">BI</div>
+    <div>
+      <div class="header-title">Superstore Executive Command Center</div>
+      
+    </div>
+  </div>
+  <div class="header-right">
+    <div class="live-pill"><span class="live-dot"></span>Live Analytics</div>
+    <div class="date-badge" id="current-date"></div>
+  </div>
+</header>
+
+<!-- FILTER BAR -->
+<div class="filter-bar">
+  <div class="filter-group">
+    <div class="filter-label">📅 Year</div>
+    <select class="filter-select" id="f-year" onchange="onFilterChange()">
+      <option value="a">All Years (2023–2026)</option>
+      <option value="2023">2023</option>
+      <option value="2024">2024</option>
+      <option value="2025">2025</option>
+      <option value="2026">2026</option>
+    </select>
+  </div>
+  <div class="filter-group">
+    <div class="filter-label">🗺 Region</div>
+    <select class="filter-select" id="f-reg" onchange="onFilterChange()">
+      <option value="a">All Regions</option>
+      <option>Central</option><option>East</option><option>South</option><option>West</option>
+    </select>
+  </div>
+  <div class="filter-group">
+    <div class="filter-label">👥 Segment</div>
+    <select class="filter-select" id="f-seg" onchange="onFilterChange()">
+      <option value="a">All Segments</option>
+      <option>Consumer</option><option>Corporate</option><option>Home Office</option>
+    </select>
+  </div>
+  <div class="filter-group">
+    <div class="filter-label">📦 Category</div>
+    <select class="filter-select" id="f-cat" onchange="onFilterChange()">
+      <option value="a">All Categories</option>
+      <option>Furniture</option><option>Office Supplies</option><option>Technology</option>
+    </select>
+  </div>
+  <div class="filter-group">
+    <div class="filter-label">🚚 Ship Mode</div>
+    <select class="filter-select" id="f-ship" onchange="onFilterChange()">
+      <option value="a">All Ship Modes</option>
+      <option>Standard Class</option><option>Second Class</option>
+      <option>First Class</option><option>Same Day</option>
+    </select>
+  </div>
+  <div class="filter-group">
+    <div class="filter-label">⚡ Discount Risk</div>
+    <select class="filter-select" id="f-risk" onchange="onFilterChange()">
+      <option value="a">All Risk Levels</option>
+      <option>Safe</option><option>High Risk</option>
+    </select>
+  </div>
+  <div class="filter-divider"></div>
+  <button class="btn-reset" onclick="resetFilters()">↺ Reset</button>
+  <div class="filter-info" id="filter-info">Showing all 10,194 records</div>
+</div>
+
+<div class="main">
+
+  <!-- KPI ROW -->
+  <div class="kpi-row">
+    <div class="kpi-card blue">
+      <div class="kpi-icon">💰</div>
+      <div class="kpi-label">Total Sales</div>
+      <div class="kpi-value" id="k-sales">—</div>
+      <div class="kpi-delta" id="k-sales-d"></div>
+      <div class="kpi-note">Gross revenue, all channels</div>
+    </div>
+    <div class="kpi-card green">
+      <div class="kpi-icon">📈</div>
+      <div class="kpi-label">Net Profit</div>
+      <div class="kpi-value" id="k-profit">—</div>
+      <div class="kpi-delta" id="k-profit-d"></div>
+      <div class="kpi-note">After discounts & COGS</div>
+    </div>
+    <div class="kpi-card teal">
+      <div class="kpi-icon">%</div>
+      <div class="kpi-label">Avg Profit Margin</div>
+      <div class="kpi-value" id="k-margin">—</div>
+      <div class="kpi-delta" id="k-margin-d"></div>
+      <div class="kpi-note">Overall portfolio margin</div>
+    </div>
+    <div class="kpi-card amber">
+      <div class="kpi-icon">🛒</div>
+      <div class="kpi-label">Total Orders</div>
+      <div class="kpi-value" id="k-orders">—</div>
+      <div class="kpi-delta" id="k-orders-d"></div>
+      <div class="kpi-note">Unique order IDs</div>
+    </div>
+    <div class="kpi-card purple">
+      <div class="kpi-icon">👤</div>
+      <div class="kpi-label">Customers</div>
+      <div class="kpi-value" id="k-custs">—</div>
+      <div class="kpi-delta" id="k-custs-d"></div>
+      <div class="kpi-note">Unique accounts served</div>
+    </div>
+    <div class="kpi-card coral">
+      <div class="kpi-icon">⚠️</div>
+      <div class="kpi-label">Loss Orders</div>
+      <div class="kpi-value" id="k-loss">—</div>
+      <div class="kpi-delta" id="k-loss-d"></div>
+      <div class="kpi-note">Orders with negative profit</div>
+    </div>
+  </div>
+
+  <!-- ROW 1: Full-width trend -->
+  <div class="section-row"><span class="section-label">Sales & Profit Performance</span><span class="section-line"></span></div>
+  <div class="chart-grid grid-12" style="margin-bottom:14px;">
+    <div class="chart-card">
+      <div class="chart-header">
+        <div class="chart-title">Monthly Sales & Profit Trend</div>
+        <div class="chart-subtitle">48-month period overview — Sales (area) vs Profit (line) with seasonal patterns</div>
+      </div>
+      <div class="legend">
+        <div class="legend-item"><div class="legend-swatch" style="background:#2563EB"></div>Sales Revenue</div>
+        <div class="legend-item"><div class="legend-swatch" style="background:#059669"></div>Net Profit</div>
+      </div>
+      <div class="chart-canvas-wrap" style="height:220px;"><canvas id="c-trend" role="img" aria-label="Monthly sales and profit trend over 48 months">Monthly sales and profit trend chart.</canvas></div>
+    </div>
+  </div>
+
+  <!-- ROW 2: Category + Region + Segment -->
+  <div class="chart-grid grid-4-4-4" style="margin-bottom:14px;">
+    <div class="chart-card">
+      <div class="chart-header">
+        <div class="chart-title">Sales by Category</div>
+        <div class="chart-subtitle">Revenue contribution per product division</div>
+      </div>
+      <div class="chart-canvas-wrap" style="height:200px;"><canvas id="c-cat-sales" role="img" aria-label="Sales by category bar chart">Category sales chart.</canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-header">
+        <div class="chart-title">Profit by Category</div>
+        <div class="chart-subtitle">Negative values flagged in red — CFO alert</div>
+      </div>
+      <div class="chart-canvas-wrap" style="height:200px;"><canvas id="c-cat-profit" role="img" aria-label="Profit by category bar chart">Category profit chart.</canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-header">
+        <div class="chart-title">Yearly Sales Growth</div>
+        <div class="chart-subtitle">Annual revenue trajectory 2023→2026</div>
+      </div>
+      <div class="chart-canvas-wrap" style="height:200px;"><canvas id="c-yearly" role="img" aria-label="Yearly sales growth bar chart">Yearly sales chart.</canvas></div>
+    </div>
+  </div>
+
+  <!-- ROW 3: Donuts + Sub-cat -->
+  <div class="section-row"><span class="section-label">Market & Customer Intelligence</span><span class="section-line"></span></div>
+  <div class="chart-grid grid-5-7" style="margin-bottom:14px;">
+    <div class="chart-grid grid-12">
+      <div class="chart-card" style="margin-bottom:14px;">
+        <div class="chart-header">
+          <div class="chart-title">Sales by Region</div>
+          <div class="chart-subtitle">Geographic revenue distribution</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:20px;">
+          <div class="chart-canvas-wrap" style="height:160px;width:160px;flex-shrink:0;"><canvas id="c-region" role="img" aria-label="Sales by region doughnut chart">Region sales.</canvas></div>
+          <div id="leg-region" class="legend" style="flex-direction:column;gap:8px;"></div>
+        </div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-header">
+          <div class="chart-title">Customer Segment Mix</div>
+          <div class="chart-subtitle">Revenue share by business segment</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:20px;">
+          <div class="chart-canvas-wrap" style="height:160px;width:160px;flex-shrink:0;"><canvas id="c-seg" role="img" aria-label="Customer segment doughnut chart">Segment mix.</canvas></div>
+          <div id="leg-seg" class="legend" style="flex-direction:column;gap:8px;"></div>
+        </div>
+      </div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-header">
+        <div class="chart-title">Sub-Category Profit Ranking</div>
+        <div class="chart-subtitle">Winners vs loss-makers — red bars = negative profit (CFO action required)</div>
+      </div>
+      <div class="chart-canvas-wrap" style="height:350px;"><canvas id="c-subcat" role="img" aria-label="Sub-category profit horizontal bar chart">Sub-category profit ranking.</canvas></div>
+    </div>
+  </div>
+
+  <!-- ROW 4: Ship mode + Risk + Top customers -->
+  <div class="section-row"><span class="section-label">Operations & Risk Analysis</span><span class="section-line"></span></div>
+  <div class="chart-grid grid-6-6" style="margin-bottom:14px;">
+    <div class="chart-card">
+      <div class="chart-header">
+        <div class="chart-title">Ship Mode: Volume & Avg Order Value</div>
+        <div class="chart-subtitle">Order count (bars) vs Average sale value (line) — First Class efficiency check</div>
+      </div>
+      <div class="legend">
+        <div class="legend-item"><div class="legend-swatch" style="background:#2563EB"></div>Order Count</div>
+        <div class="legend-item"><div class="legend-swatch" style="background:#D97706"></div>Avg Sale ($)</div>
+      </div>
+      <div class="chart-canvas-wrap" style="height:200px;"><canvas id="c-ship" role="img" aria-label="Ship mode mixed chart">Ship mode comparison.</canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-header">
+        <div class="chart-title">Top 10 Customers by Profit</div>
+        <div class="chart-subtitle">Pareto — these accounts drive disproportionate value</div>
+      </div>
+      <div class="chart-canvas-wrap" style="height:240px;"><canvas id="c-topcust" role="img" aria-label="Top 10 customers by profit horizontal bar">Top customers.</canvas></div>
+    </div>
+  </div>
+
+  <!-- ROW 5: Running total + Risk -->
+  <div class="chart-grid grid-8-4" style="margin-bottom:14px;">
+    <div class="chart-card">
+      <div class="chart-header">
+        <div class="chart-title">Running Total Sales — Cumulative Growth Curve</div>
+        <div class="chart-subtitle">Cumulative revenue momentum across the 4-year period</div>
+      </div>
+      <div class="chart-canvas-wrap" style="height:200px;"><canvas id="c-running" role="img" aria-label="Running total sales area chart">Cumulative sales.</canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-header">
+        <div class="chart-title">Discount Risk Distribution</div>
+        <div class="chart-subtitle">Safe vs High Risk orders — high risk = discount ≥ 50%</div>
+      </div>
+      <div class="chart-canvas-wrap" style="height:160px;"><canvas id="c-risk" role="img" aria-label="Discount risk pie chart">Risk distribution.</canvas></div>
+      <div id="leg-risk" class="legend" style="margin-top:10px;justify-content:center;"></div>
+    </div>
+  </div>
+
+
+  <!-- EXTRA: Region Profit Margin Bar -->
+  <div class="chart-grid grid-6-6" style="margin-bottom:14px;">
+    <div class="chart-card">
+      <div class="chart-header">
+        <div class="chart-title">Profit by Region — $</div>
+        <div class="chart-subtitle">Absolute profit contribution per region</div>
+      </div>
+      <div class="chart-canvas-wrap" style="height:200px;"><canvas id="c-reg-profit" role="img" aria-label="Profit by region bar chart">Region profit chart.</canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-header">
+        <div class="chart-title">Sales vs Profit — Category Scatter</div>
+        <div class="chart-subtitle">Bubble size = number of orders. Margin efficiency quadrant view.</div>
+      </div>
+      <div class="chart-canvas-wrap" style="height:200px;"><canvas id="c-scatter" role="img" aria-label="Sales vs profit scatter by category">Category scatter.</canvas></div>
+    </div>
+  </div>
+
+  <!-- ROW 6: Heatmap -->
+  <div class="section-row"><span class="section-label">Quarterly Regional Profit Heatmap</span><span class="section-line"></span></div>
+  <div class="chart-card" style="margin-bottom:14px;">
+    <div class="chart-header">
+      <div class="chart-title">Quarterly Profit by Region</div>
+      <div class="chart-subtitle">Color intensity = profit magnitude. Darker = higher profit. Identifies seasonal peaks and regional strength.</div>
+    </div>
+    <div id="heatmap-container"></div>
+  </div>
+
+  <!-- EXECUTIVE INSIGHTS -->
+  <div class="insights-panel">
+    <div class="insights-header">
+      <div class="insights-title">Executive Insights</div>
+      
+    </div>
+    <div class="insights-grid">
+      <div class="insight-item">
+        <div class="insight-icon">🏆</div>
+        <div class="insight-item-label">Top Region</div>
+        <div class="insight-item-val" id="ins-top-region">—</div>
+        <div class="insight-item-desc" id="ins-top-region-d">—</div>
+      </div>
+      <div class="insight-item">
+        <div class="insight-icon">⭐</div>
+        <div class="insight-item-label">Best Sub-Category</div>
+        <div class="insight-item-val" id="ins-best-sc">—</div>
+        <div class="insight-item-desc" id="ins-best-sc-d">—</div>
+      </div>
+      <div class="insight-item">
+        <div class="insight-icon">🔴</div>
+        <div class="insight-item-label">Worst Sub-Category</div>
+        <div class="insight-item-val" id="ins-worst-sc">—</div>
+        <div class="insight-item-desc" id="ins-worst-sc-d">—</div>
+      </div>
+      <div class="insight-item">
+        <div class="insight-icon">📊</div>
+        <div class="insight-item-label">Loss-Order Rate</div>
+        <div class="insight-item-val" id="ins-loss-rate">—</div>
+        <div class="insight-item-desc" id="ins-loss-rate-d">—</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ALERTS -->
+  <div class="cfo-alerts">
+    <div class="section-row" style="margin-top:14px;"><span class="section-label">Action Alerts</span><span class="section-line"></span></div>
+    <div class="alert-row">
+      <div class="alert-card danger">
+        <div class="alert-icon">🚨</div>
+        <div>
+          <div class="alert-title">Discount-Driven Losses — Tables & Bookcases</div>
+          <div class="alert-desc" id="cfo-alert-1">Tables: −$11,023 total loss. Bookcases: −$1,875. High-discount orders (≥40%) are the primary driver. Recommend minimum 20% discount cap on Furniture sub-categories.</div>
+        </div>
+      </div>
+      <div class="alert-card warn">
+        <div class="alert-icon">⚠️</div>
+        <div>
+          <div class="alert-title">Region Below Average Margin — Central</div>
+          <div class="alert-desc" id="cfo-alert-2">Central margin: 6.9% vs company avg 11.5%. Investigate product mix and discount policies in this region. South margin at 12.7% — use as benchmark.</div>
+        </div>
+      </div>
+      <div class="alert-card info">
+        <div class="alert-icon">📦</div>
+        <div>
+          <div class="alert-title">Ship Mode Efficiency — First Class Premium</div>
+          <div class="alert-desc">First Class avg order value: $227 vs Standard Class: $225. Marginal premium. Validate if First Class fulfillment cost is justified by customer retention metrics.</div>
+        </div>
+      </div>
+      <div class="alert-card success">
+        <div class="alert-icon">💎</div>
+        <div>
+          <div class="alert-title">Pareto Alert — Top Accounts Drive 20% of Profit</div>
+          <div class="alert-desc" id="cfo-alert-4">Top 10 customers contribute disproportionate profit. Prioritize retention programs and dedicated account management for these accounts.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+
+
+
+<script>
+// ── REAL DATA FROM ORDERS_CLEAN.CSV (10,194 rows, pre-aggregated) ──
+const AGGS = {"a:a:a:a:a:a":{"ts":2326534,"tp":267687,"am":11.51,"or":5111,"cu":800,"lo":1901,"mo":[["2023-01",14518,2372,14518],["2023-02",4520,862,19038],["2023-03",56934,2377,75972],["2023-04",28295,3585,104267],["2023-05",26320,2510,130587],["2023-06",34669,4533,165256],["2023-07",33946,2548,199203],["2023-08",28918,5716,228121],["2023-09",82670,6105,310792],["2023-10",32413,3837,343205],["2023-11",78827,7876,422032],["2023-12",72008,8163,494040],["2024-01",18462,-815,512502],["2024-02",11951,2113,524454],["2024-03",39979,6530,564432],["2024-04",34195,3842,598627],["2024-05",30247,4032,628874],["2024-06",24797,3121,653672],["2024-07",28765,3097,682437],["2024-08",37057,4220,719494],["2024-09",64627,10174,784121],["2024-10",31407,2953,815528],["2024-11",75972,10519,891501],["2024-12",75533,10128,967033],["2025-01",18830,3077,985863],["2025-02",22979,2775,1008842],["2025-03",53031,2682,1061873],["2025-04",38829,3237,1100702],["2025-05",57043,7323,1157745],["2025-06",40937,4971,1198682],["2025-07",40301,4859,1238983],["2025-08",31717,2345,1270700],["2025-09",73522,8774,1344221],["2025-10",59831,5929,1404052],["2025-11",79412,9387,1483464],["2025-12",97502,12797,1580967],["2026-01",44259,4900,1625226],["2026-02",20301,1834,1645527],["2026-03",60728,8001,1706256],["2026-04",36779,3299,1743035],["2026-05",45155,5979,1788190],["2026-06",53056,6933,1841246],["2026-07",45989,6713,1887236],["2026-08",64130,9418,1951365],["2026-09",88065,12061,2039430],["2026-10",83475,6573,2122905],["2026-11",118454,12058,2241359],["2026-12",85175,11365,2326534]],"cs":[754748,731893,839893],"cp":[28160,122573,116954],"rs":[503171,691828,391722,739814],"rp":[34728,81773,49767,101419],"ss":[1170660,715806,440068],"sc":[["Phones",43696],["Accessories",40710],["Paper",34511],["Chairs",26904],["Binders",26740],["Copiers",23953],["Storage",21076],["Appliances",19346],["Furnishings",14155],["Machines",8596],["Envelopes",6988],["Art",6653],["Labels",5573],["Fasteners",1647],["Supplies",40],["Bookcases",-1875],["Tables",-11023]],"shn":[6120,1979,1548,547],"sha":[225,236,227,236],"ri":[8779,1415],"t10":[["Brian Moss",2199],["Helen Wasserman",1940],["Clay Ludtke",1934],["Greg Tran",1928],["Laura Armstrong",1928],["Ben Ferrer",1915],["Maria Etezadi",1683],["Dan Reichenbach",1642],["Karen Ferguson",1608],["Valerie Dominguez",1586]],"yr":[["2023",494040,50483],["2024",472993,59914],["2025",613934,68156],["2026",745567,89134]],"qr":{"Central_Q1":3711,"East_Q1":5927,"South_Q1":11031,"West_Q1":16040,"West_Q2":18642,"East_Q2":15471,"South_Q2":12370,"Central_Q2":6881,"South_Q3":13656,"West_Q3":32901,"East_Q3":23374,"Central_Q3":6099,"West_Q4":33836,"Central_Q4":18038,"South_Q4":12709,"East_Q4":37001}},"2023:a:a:a:a:a":{"ts":494040,"tp":50483,"am":10.22,"or":995,"cu":605,"lo":384,"mo":[["2023-01",14518,2372,14518],["2023-02",4520,862,19038],["2023-03",56934,2377,75972],["2023-04",28295,3585,104267],["2023-05",26320,2510,130587],["2023-06",34669,4533,165256],["2023-07",33946,2548,199203],["2023-08",28918,5716,228121],["2023-09",82670,6105,310792],["2023-10",32413,3837,343205],["2023-11",78827,7876,422032],["2023-12",72008,8163,494040]],"cs":[162125,154014,177901],"cp":[6532,23102,20849],"rs":[103838,135440,103846,150916],"rp":[2744,15016,12820,19903],"ss":[268700,130792,94548],"sc":[["Phones",11030],["Chairs",6855],["Paper",6588],["Accessories",6230],["Binders",4723],["Storage",3990],["Copiers",3194],["Appliances",2855],["Furnishings",2296],["Envelopes",1495],["Art",1434],["Labels",1286],["Supplies",497],["Machines",395],["Fasteners",233],["Bookcases",-338],["Tables",-2280]],"shn":[1278,388,293,92],"sha":[245,266,204,199],"ri":[1765,286],"t10":[["Maria Etezadi",1167],["Dianna Wilson",1144],["Sanjit Chand",1129],["Mitch Webber",1113],["Nathan Mautz",988],["Tom Boeckenhauer",898],["Darrin Martin",798],["Katherine Murray",783],["Ruben Ausman",776],["Sample Company A",765]],"yr":[["2023",494040,50483],["2024",0,0],["2025",0,0],["2026",0,0]],"qr":{"Central_Q1":287,"East_Q1":-320,"South_Q1":3656,"West_Q1":1987,"West_Q2":3728,"East_Q2":2181,"South_Q2":3759,"Central_Q2":959,"South_Q3":2046,"West_Q3":7377,"East_Q3":5916,"Central_Q3":-970,"West_Q4":6811,"Central_Q4":2469,"South_Q4":3358,"East_Q4":7238}},"2024:a:a:a:a:a":{"ts":472993,"tp":59914,"am":12.67,"or":1053,"cu":577,"lo":400,"mo":[["2024-01",18462,-815,18462],["2024-02",11951,2113,30413],["2024-03",39979,6530,70392],["2024-04",34195,3842,104587],["2024-05",30247,4032,134834],["2024-06",24797,3121,159631],["2024-07",28765,3097,188397],["2024-08",37057,4220,225454],["2024-09",64627,10174,290081],["2024-10",31407,2953,321488],["2024-11",75972,10519,397460],["2024-12",75533,10128,472993]],"cs":[172330,137670,162992],"cp":[6868,23203,29843],"rs":[102874,157071,71360,141687],"rp":[9829,21181,8585,20320],"ss":[267332,129108,76552],"sc":[["Phones",10458],["Accessories",9936],["Paper",6580],["Copiers",6537],["Chairs",6180],["Binders",4689],["Storage",3533],["Appliances",3459],["Furnishings",3194],["Machines",2912],["Envelopes",1977],["Art",1486],["Labels",1323],["Fasteners",182],["Supplies",-25],["Bookcases",-1181],["Tables",-1324]],"shn":[1307,425,289,109],"sha":[218,213,240,253],"ri":[1834,296],"t10":[["Fred Hopkins",1229],["Natalie Webber",1209],["Keith Dawkins",1151],["Valerie Dominguez",959],["Sarah Brown",939],["Greg Tran",896],["Craig Carroll",895],["Naresj Patel",853],["Todd Sumrall",830],["Philisse Overcash",823]],"yr":[["2023",0,0],["2024",472993,59914],["2025",0,0],["2026",0,0]],"qr":{"East_Q1":1741,"Central_Q1":63,"South_Q1":1503,"West_Q1":4521,"Central_Q2":1363,"West_Q2":4008,"East_Q2":3335,"South_Q2":2289,"Central_Q3":2595,"South_Q3":4218,"East_Q3":6962,"West_Q3":3714,"East_Q4":9142,"Central_Q4":5807,"West_Q4":8076,"South_Q4":575}},"2025:a:a:a:a:a":{"ts":613934,"tp":68156,"am":11.1,"or":1340,"cu":650,"lo":485,"mo":[["2025-01",18830,3077,18830],["2025-02",22979,2775,41809],["2025-03",53031,2682,94840],["2025-04",38829,3237,133669],["2025-05",57043,7323,190712],["2025-06",40937,4971,231649],["2025-07",40301,4859,271950],["2025-08",31717,2345,303667],["2025-09",73522,8774,377188],["2025-10",59831,5929,437019],["2025-11",79412,9387,516431],["2025-12",97502,12797,613934]],"cs":[200980,186374,226580],"cp":[8050,32141,27965],"rs":[148605,182750,93610,188969],"rp":[10275,20098,14129,23654],"ss":[299715,207661,106557],"sc":[["Phones",9561],["Accessories",9425],["Paper",9089],["Binders",7021],["Storage",6215],["Copiers",6079],["Chairs",5802],["Appliances",5028],["Furnishings",4202],["Machines",2899],["Envelopes",2074],["Art",1463],["Labels",1161],["Fasteners",314],["Bookcases",133],["Supplies",-225],["Tables",-2086]],"shn":[1586,500,390,158],"sha":[236,244,211,218],"ri":[2264,370],"t10":[["Laura Armstrong",1430],["Joe Elijah",1279],["Christopher Conant",1158],["Rick Huthwaite",1153],["Anna H\u00e4berlin",1061],["Jonathan Doherty",1055],["Grace Kelly",1042],["Eugene Moren",969],["Tamara Chand",935],["Toby Gnade",845]],"yr":[["2023",0,0],["2024",0,0],["2025",613934,68156],["2026",0,0]],"qr":{"East_Q1":2310,"Central_Q1":426,"West_Q1":2438,"South_Q1":3361,"East_Q2":5924,"South_Q2":3299,"West_Q2":4633,"Central_Q2":1675,"West_Q3":7709,"South_Q3":3410,"East_Q3":3805,"Central_Q3":1055,"West_Q4":8875,"Central_Q4":7120,"East_Q4":8059,"South_Q4":4059}},"2026:a:a:a:a:a":{"ts":745567,"tp":89134,"am":11.96,"or":1723,"cu":700,"lo":632,"mo":[["2026-01",44259,4900,44259],["2026-02",20301,1834,64560],["2026-03",60728,8001,125289],["2026-04",36779,3299,162068],["2026-05",45155,5979,207223],["2026-06",53056,6933,260279],["2026-07",45989,6713,306269],["2026-08",64130,9418,370399],["2026-09",88065,12061,458463],["2026-10",83475,6573,541938],["2026-11",118454,12058,660392],["2026-12",85175,11365,745567]],"cs":[219313,253835,272419],"cp":[6709,44128,38297],"rs":[147853,216567,122906,258241],"rp":[11880,25479,14233,37542],"ss":[334912,248244,162411],"sc":[["Accessories",15119],["Phones",12647],["Paper",12254],["Binders",10307],["Copiers",8142],["Chairs",8067],["Appliances",8004],["Storage",7337],["Furnishings",4464],["Machines",2390],["Art",2271],["Labels",1803],["Envelopes",1442],["Fasteners",917],["Supplies",-207],["Bookcases",-489],["Tables",-5332]],"shn":[1949,666,576,188],"sha":[208,226,243,260],"ri":[2916,463],"t10":[["Brian Moss",1938],["Helen Wasserman",1723],["Rick Wilson",1576],["Seth Vernon",1531],["Bill Eplett",1181],["Tom Ashbrook",1171],["Karen Ferguson",1155],["Yana Sorensen",1151],["Dan Reichenbach",1087],["Justin Deggeller",1061]],"yr":[["2023",0,0],["2024",0,0],["2025",0,0],["2026",745567,89134]],"qr":{"Central_Q1":2935,"West_Q1":7094,"East_Q1":2196,"South_Q1":2510,"West_Q2":6273,"South_Q2":3023,"Central_Q2":2884,"East_Q2":4031,"Central_Q3":3420,"West_Q3":14100,"South_Q3":3981,"East_Q3":6691,"West_Q4":10075,"Central_Q4":2642,"East_Q4":12561,"South_Q4":4718}},"a:Central:a:a:a:a":{"ts":503171,"tp":34728,"am":6.9,"or":1179,"cu":629,"lo":747,"mo":[["2023-01",1540,118,1540],["2023-02",1233,295,2773],["2023-03",5828,-127,8601],["2023-04",3712,229,12313],["2023-05",4048,-506,16361],["2023-06",9646,1236,26008],["2023-07",6741,-666,32748],["2023-08",3022,628,35771],["2023-09",34409,-933,70179],["2023-10",8966,1286,79145],["2023-11",14058,374,93203],["2023-12",10636,809,103838],["2024-01",2511,-477,106349],["2024-02",2528,331,108876],["2024-03",6730,210,115606],["2024-04",11642,725,127249],["2024-05",8624,764,135872],["2024-06",3713,-126,139586],["2024-07",7606,305,147191],["2024-08",9301,727,156493],["2024-09",7579,1563,164071],["2024-10",7000,87,171072],["2024-11",18903,3262,189975],["2024-12",16738,2459,206712],["2025-01",5942,700,212654],["2025-02",1116,-143,213770],["2025-03",13154,-132,226924],["2025-04",7462,195,234386],["2025-05",11744,1246,246130],["2025-06",6553,235,252683],["2025-07",9933,999,262616],["2025-08",6983,196,269599],["2025-09",17503,-141,287102],["2025-10",25969,2760,313071],["2025-11",16910,1471,329982],["2025-12",25335,2889,355317],["2026-01",21691,1651,377008],["2026-02",3335,-779,380342],["2026-03",15505,2063,395847],["2026-04",3383,125,399230],["2026-05",11589,1765,410819],["2026-06",12967,994,423786],["2026-07",9598,1118,433384],["2026-08",6253,531,439637],["2026-09",17343,1770,456980],["2026-10",12153,410,469132],["2026-11",15155,572,484287],["2026-12",18883,1659,503171]],"cs":[164538,168217,170416],"cp":[-1923,12174,24477],"rs":[503171,0,0,0],"rp":[34728,0,0,0],"ss":[253962,157996,91213],"sc":[["Phones",12149],["Accessories",6992],["Paper",6972],["Chairs",6248],["Copiers",5686],["Storage",1975],["Envelopes",1778],["Art",1195],["Labels",1073],["Binders",325],["Fasteners",237],["Supplies",-188],["Machines",-350],["Appliances",-1192],["Bookcases",-1867],["Tables",-2651],["Furnishings",-3653]],"shn":[1447,465,303,120],"sha":[221,223,194,170],"ri":[1688,647],"t10":[["Helen Wasserman",1155],["Dianna Wilson",1148],["Tonja Turnell",1113],["Brian Moss",1012],["Adrian Barton",986],["Bill Eplett",982],["Philisse Overcash",926],["Tamara Chand",915],["Laura Armstrong",911],["Frank Carlisle",791]],"yr":[["2023",103838,2744],["2024",102874,9829],["2025",148605,10275],["2026",147853,11880]],"qr":{"Central_Q1":3711,"Central_Q2":6881,"Central_Q3":6099,"Central_Q4":18038}},"a:East:a:a:a:a":{"ts":691828,"tp":81773,"am":11.82,"or":1475,"cu":681,"lo":574,"mo":[["2023-01",717,50,717],["2023-02",200,63,917],["2023-03",5943,-432,6861],["2023-04",3055,-125,9915],["2023-05",9053,1267,18969],["2023-06",10834,1038,29802],["2023-07",3568,847,33370],["2023-08",5591,1249,38962],["2023-09",26186,3820,65147],["2023-10",9119,511,74267],["2023-11",34149,3200,108416],["2023-12",27024,3528,135440],["2024-01",4959,-843,140399],["2024-02",6463,1106,146862],["2024-03",6021,1478,152883],["2024-04",7779,1017,160662],["2024-05",7597,1198,168259],["2024-06",7443,1121,175702],["2024-07",11873,2159,187574],["2024-08",9622,928,197197],["2024-09",29472,3876,226669],["2024-10",6302,1460,232971],["2024-11",34725,5187,267695],["2024-12",24816,2495,292511],["2025-01",5148,890,297659],["2025-02",3150,574,300809],["2025-03",16837,846,317646],["2025-04",17840,1743,335486],["2025-05",22644,2407,358130],["2025-06",12330,1775,370460],["2025-07",8524,317,378985],["2025-08",9866,695,388851],["2025-09",20310,2793,409161],["2025-10",15065,1660,424227],["2025-11",22982,1423,447209],["2025-12",28052,4977,475261],["2026-01",5671,447,480932],["2026-02",4969,494,485901],["2026-03",8313,1255,494214],["2026-04",10231,1148,504445],["2026-05",6145,856,510590],["2026-06",15236,2027,525826],["2026-07",12322,1184,538148],["2026-08",21767,2091,559915],["2026-09",32546,3416,592460],["2026-10",32346,3233,624807],["2026-11",45640,5797,670447],["2026-12",21381,3531,691828]],"cs":[212232,211658,267938],"cp":[6250,41242,34281],"rs":[0,691828,0,0],"rp":[0,81773,0,0],"ss":[357142,203577,131110],"sc":[["Phones",12171],["Accessories",10762],["Binders",10351],["Chairs",10032],["Paper",9450],["Appliances",8344],["Storage",8156],["Copiers",6332],["Furnishings",6143],["Machines",5016],["Art",1988],["Envelopes",1812],["Labels",1156],["Fasteners",384],["Bookcases",-391],["Supplies",-400],["Tables",-9535]],"shn":[1783,548,496,159],"sha":[233,217,229,278],"ri":[2507,479],"t10":[["Greg Tran",1514],["Seth Vernon",1317],["Denny Blanton",1179],["Tom Ashbrook",1171],["Corinna Mitchell",1147],["Brian Moss",1135],["Todd Sumrall",1053],["Daniel Raglin",1028],["Mitch Webber",926],["Katherine Murray",899]],"yr":[["2023",135440,15016],["2024",157071,21181],["2025",182750,20098],["2026",216567,25479]],"qr":{"East_Q1":5927,"East_Q2":15471,"East_Q3":23374,"East_Q4":37001}},"a:South:a:a:a:a":{"ts":391722,"tp":49767,"am":12.7,"or":822,"cu":512,"lo":259,"mo":[["2023-01",9322,2170,9322],["2023-02",2029,279,11351],["2023-03",32911,1207,44262],["2023-04",12185,1851,56447],["2023-05",5779,930,62226],["2023-06",4560,978,66786],["2023-07",1829,420,68615],["2023-08",7057,1352,75672],["2023-09",7175,275,82847],["2023-10",4814,654,87661],["2023-11",7429,1343,95090],["2023-12",8756,1361,103846],["2024-01",4966,-95,108812],["2024-02",1157,223,109968],["2024-03",10322,1375,120290],["2024-04",5718,767,126009],["2024-05",1984,429,127992],["2024-06",8552,1092,136545],["2024-07",2197,608,138742],["2024-08",5585,1326,144327],["2024-09",13677,2284,158004],["2024-10",4086,-373,162090],["2024-11",7796,320,169886],["2024-12",5320,628,175206],["2025-01",4082,842,179288],["2025-02",15613,1955,194901],["2025-03",4238,564,199140],["2025-04",2966,427,202105],["2025-05",11960,2186,214065],["2025-06",3456,686,217521],["2025-07",6562,972,224084],["2025-08",3050,173,227134],["2025-09",12023,2266,239157],["2025-10",3165,383,242322],["2025-11",15597,2051,257919],["2025-12",10897,1624,268816],["2026-01",4816,516,273632],["2026-02",2183,470,275814],["2026-03",6644,1524,282458],["2026-04",9448,662,291906],["2026-05",10944,1229,302850],["2026-06",8934,1133,311784],["2026-07",3302,578,315086],["2026-08",10372,1107,325457],["2026-09",10201,2296,335658],["2026-10",12137,99,347795],["2026-11",28717,2244,376512],["2026-12",15210,2375,391722]],"cs":[117299,125651,148772],"cp":[10159,19392,20216],"rs":[0,0,391722,0],"rp":[0,0,49767,0],"ss":[195581,121886,74255],"sc":[["Phones",10233],["Accessories",6921],["Chairs",6436],["Paper",5947],["Appliances",3999],["Furnishings",3443],["Binders",3405],["Copiers",2547],["Storage",2300],["Envelopes",1465],["Bookcases",1339],["Art",1059],["Labels",1041],["Machines",515],["Fasteners",174],["Supplies",2],["Tables",-1059]],"shn":[974,329,234,83],"sha":[234,285,211,253],"ri":[1449,171],"t10":[["Maria Etezadi",1313],["Anna H\u00e4berlin",1012],["Giulietta Baptist",914],["Ruben Ausman",863],["Karen Carlisle",849],["Thomas Boland",805],["Katrina Willman",759],["Ben Ferrer",754],["Mitch Willingham",743],["Paul Prost",716]],"yr":[["2023",103846,12820],["2024",71360,8585],["2025",93610,14129],["2026",122906,14233]],"qr":{"South_Q1":11031,"South_Q2":12370,"South_Q3":13656,"South_Q4":12709}},"a:West:a:a:a:a":{"ts":739814,"tp":101419,"am":13.71,"or":1635,"cu":686,"lo":321,"mo":[["2023-01",2939,33,2939],["2023-02",1058,225,3997],["2023-03",12252,1729,16248],["2023-04",9343,1629,25592],["2023-05",7439,818,33031],["2023-06",9629,1280,42660],["2023-07",21809,1947,64469],["2023-08",13248,2487,77717],["2023-09",14901,2944,92618],["2023-10",9515,1386,102132],["2023-11",23192,2959,125324],["2023-12",25593,2466,150916],["2024-01",6027,600,156943],["2024-02",1804,454,158747],["2024-03",16905,3467,175652],["2024-04",9056,1333,184708],["2024-05",12043,1641,196751],["2024-06",5089,1034,201840],["2024-07",7090,24,208930],["2024-08",12548,1239,221478],["2024-09",13899,2451,235377],["2024-10",14019,1779,249396],["2024-11",14549,1750,263945],["2024-12",28659,4547,292604],["2025-01",3658,644,296262],["2025-02",3100,388,299362],["2025-03",18802,1405,318164],["2025-04",10561,873,328725],["2025-05",10694,1484,339419],["2025-06",18598,2275,358017],["2025-07",15281,2571,373298],["2025-08",11818,1282,385116],["2025-09",23685,3855,408801],["2025-10",15631,1126,424432],["2025-11",23923,4443,448355],["2025-12",33218,3306,481573],["2026-01",12082,2286,493654],["2026-02",9815,1648,503469],["2026-03",30267,3160,533736],["2026-04",13717,1365,547454],["2026-05",16478,2129,563931],["2026-06",15920,2780,579851],["2026-07",20768,3833,600619],["2026-08",25738,5688,626356],["2026-09",27975,4579,654332],["2026-10",26839,2831,681171],["2026-11",28942,3443,710113],["2026-12",29701,3800,739814]],"cs":[260680,226367,252767],"cp":[13675,49765,37979],"rs":[0,0,0,739814],"rp":[0,0,0,101419],"ss":[363975,232348,143491],"sc":[["Accessories",16034],["Binders",12659],["Paper",12142],["Copiers",9387],["Phones",9142],["Storage",8645],["Furnishings",8221],["Appliances",8194],["Chairs",4188],["Machines",3415],["Art",2411],["Labels",2303],["Tables",2222],["Envelopes",1933],["Fasteners",852],["Supplies",626],["Bookcases",-956]],"shn":[1916,637,515,185],"sha":[217,236,252,236],"ri":[3135,118],"t10":[["Yana Sorensen",1179],["Robert Marley",1161],["Fred Hopkins",1081],["Joseph Holt",1075],["Nicole Fjeld",1067],["Dan Reichenbach",952],["Rick Wilson",934],["Sample Company A",915],["Clay Ludtke",890],["Karen Ferguson",878]],"yr":[["2023",150916,19903],["2024",141687,20320],["2025",188969,23654],["2026",258241,37542]],"qr":{"West_Q1":16040,"West_Q2":18642,"West_Q3":32901,"West_Q4":33836}},"a:a:Consumer:a:a:a":{"ts":1170660,"tp":127926,"am":10.93,"or":2628,"cu":412,"lo":1018,"mo":[["2023-01",6928,775,6928],["2023-02",3168,497,10096],["2023-03",11869,745,21965],["2023-04",9109,1155,31074],["2023-05",13910,915,44984],["2023-06",25924,2995,70908],["2023-07",20198,1163,91106],["2023-08",17205,2546,108310],["2023-09",59728,5370,168039],["2023-10",16247,2332,184285],["2023-11",46572,2328,230857],["2023-12",37843,3295,268700],["2024-01",14275,-426,282975],["2024-02",9269,1574,292244],["2024-03",17419,2889,309663],["2024-04",22626,2756,332289],["2024-05",20994,2698,353284],["2024-06",12825,2426,366108],["2024-07",19949,1788,386057],["2024-08",20748,2828,406806],["2024-09",38885,5442,445690],["2024-10",17129,693,462819],["2024-11",33147,3922,495966],["2024-12",40067,5075,536033],["2025-01",6027,122,542059],["2025-02",15800,1653,557860],["2025-03",24917,1013,582777],["2025-04",14154,1186,596931],["2025-05",32230,2942,629161],["2025-06",24430,3351,653591],["2025-07",23670,3039,677261],["2025-08",14487,1523,691748],["2025-09",42685,6351,734434],["2025-10",10280,1211,744714],["2025-11",41450,4387,786163],["2025-12",49584,8015,835748],["2026-01",23212,2439,858960],["2026-02",5589,233,864549],["2026-03",35655,3607,900203],["2026-04",9292,1325,909496],["2026-05",21060,2760,930556],["2026-06",20273,2370,950829],["2026-07",19716,1923,970545],["2026-08",32619,3980,1003164],["2026-09",43895,6163,1047059],["2026-10",23225,2232,1070283],["2026-11",49790,3979,1120073],["2026-12",50586,6342,1170660]],"cs":[394724,369536,406400],"cp":[12647,56196,59083],"rs":[253962,357142,195581,363975],"rp":[10432,41303,25664,50527],"ss":[1170660,0,0],"sc":[["Phones",22785],["Accessories",20286],["Paper",15922],["Binders",14201],["Chairs",13722],["Copiers",11290],["Appliances",8771],["Furnishings",8232],["Storage",7135],["Machines",4721],["Art",3557],["Envelopes",3288],["Labels",3102],["Fasteners",666],["Supplies",-446],["Bookcases",-2556],["Tables",-6751]],"shn":[3145,1042,777,317],"sha":[228,224,205,191],"ri":[4535,746],"t10":[["Clay Ludtke",1934],["Greg Tran",1928],["Valerie Dominguez",1586],["Sanjit Chand",1424],["James Galang",1416],["Joe Elijah",1384],["Steven Cartwright",1277],["Christopher Conant",1252],["Denny Blanton",1221],["Jamie Kunitz",1220]],"yr":[["2023",268700,24115],["2024",267332,31665],["2025",299715,34792],["2026",334912,37354]],"qr":{"Central_Q1":744,"East_Q1":4537,"West_Q1":5827,"South_Q1":4012,"West_Q2":10311,"South_Q2":6399,"Central_Q2":109,"East_Q2":10062,"East_Q3":12527,"South_Q3":9639,"Central_Q3":2893,"West_Q3":17056,"Central_Q4":6687,"East_Q4":14176,"West_Q4":17333,"South_Q4":5615}},"a:a:Corporate:a:a:a":{"ts":715806,"tp":83550,"am":11.67,"or":1552,"cu":239,"lo":562,"mo":[["2023-01",1983,390,1983],["2023-02",1184,307,3166],["2023-03",11107,370,14273],["2023-04",14132,1489,28405],["2023-05",9142,1357,37547],["2023-06",3971,102,41518],["2023-07",10033,1309,51551],["2023-08",7471,2255,59022],["2023-09",16363,-229,75385],["2023-10",13565,1181,88950],["2023-11",21193,3500,110143],["2023-12",20650,2016,130792],["2024-01",3670,-134,134463],["2024-02",2565,508,137028],["2024-03",16332,2935,153360],["2024-04",4121,563,157481],["2024-05",5455,678,162936],["2024-06",9404,583,172340],["2024-07",7192,907,179532],["2024-08",11456,1339,190988],["2024-09",16611,2820,207599],["2024-10",8646,1386,216245],["2024-11",27300,3765,243545],["2024-12",16356,1922,259901],["2025-01",9773,1957,269674],["2025-02",2867,92,272540],["2025-03",14226,4,286767],["2025-04",16177,1471,302944],["2025-05",18452,3031,321397],["2025-06",7826,705,329223],["2025-07",13169,1398,342392],["2025-08",12943,992,355335],["2025-09",17877,1434,373212],["2025-10",32131,1974,405342],["2025-11",26493,3890,431836],["2025-12",35726,3710,467562],["2026-01",12509,857,480071],["2026-02",7959,1638,488030],["2026-03",16575,3042,504605],["2026-04",14803,1356,519408],["2026-05",14259,1899,533667],["2026-06",19695,3233,553362],["2026-07",16526,2938,569888],["2026-08",25698,4215,595586],["2026-09",24265,3314,619851],["2026-10",30525,2102,650376],["2026-11",44651,4910,695027],["2026-12",20779,2068,715806]],"cs":[231268,236314,248225],"cp":[9557,41561,32432],"rs":[157996,203577,121886,232348],"rp":[12722,22048,16519,32262],"ss":[0,715806,0],"sc":[["Accessories",12534],["Phones",12014],["Paper",10383],["Storage",9012],["Chairs",8141],["Binders",7680],["Appliances",6959],["Copiers",6742],["Furnishings",3950],["Envelopes",2571],["Art",2028],["Labels",1761],["Machines",1141],["Fasteners",829],["Bookcases",356],["Supplies",339],["Tables",-2890]],"shn":[1874,611,487,118],"sha":[223,239,217,390],"ri":[2666,424],"t10":[["Brian Moss",2199],["Helen Wasserman",1940],["Laura Armstrong",1928],["Dan Reichenbach",1642],["Justin Deggeller",1563],["Rick Wilson",1502],["Yana Sorensen",1406],["Edward Hooks",1393],["Keith Dawkins",1380],["Todd Sumrall",1330]],"yr":[["2023",130792,14047],["2024",129108,17272],["2025",207661,20657],["2026",248244,31573]],"qr":{"South_Q1":3407,"East_Q1":986,"West_Q1":5229,"Central_Q1":2346,"East_Q2":2390,"South_Q2":4969,"West_Q2":5626,"Central_Q2":3481,"South_Q3":3096,"West_Q3":11575,"Central_Q3":776,"East_Q3":7245,"West_Q4":9831,"Central_Q4":6118,"South_Q4":5048,"East_Q4":11427}},"a:a:Home Office:a:a:a":{"ts":440068,"tp":56211,"am":12.77,"or":931,"cu":149,"lo":321,"mo":[["2023-01",5608,1207,5608],["2023-02",168,58,5776],["2023-03",33958,1262,39734],["2023-04",5055,940,44789],["2023-05",3267,238,48056],["2023-06",4775,1435,52831],["2023-07",3716,77,56546],["2023-08",4242,915,60789],["2023-09",6579,964,67368],["2023-10",2602,323,69970],["2023-11",11062,2048,81032],["2023-12",13516,2853,94548],["2024-01",517,-255,95064],["2024-02",117,31,95181],["2024-03",6228,706,101409],["2024-04",7448,523,108857],["2024-05",3798,656,112654],["2024-06",2569,112,115223],["2024-07",1625,402,116848],["2024-08",4853,53,121701],["2024-09",9131,1912,130832],["2024-10",5632,874,136464],["2024-11",15526,2832,151990],["2024-12",19110,3132,171100],["2025-01",3031,998,174131],["2025-02",4312,1029,178442],["2025-03",13887,1665,192330],["2025-04",8497,580,200827],["2025-05",6361,1350,207188],["2025-06",8681,915,215869],["2025-07",3461,423,219330],["2025-08",4286,-169,223617],["2025-09",12959,988,236576],["2025-10",17420,2744,253996],["2025-11",11469,1111,265465],["2025-12",12192,1072,277657],["2026-01",8538,1604,286195],["2026-02",6753,-38,292948],["2026-03",8499,1353,301447],["2026-04",12684,618,314131],["2026-05",9836,1320,323967],["2026-06",13088,1329,337055],["2026-07",9747,1852,346803],["2026-08",5813,1223,352616],["2026-09",19904,2584,372520],["2026-10",29725,2239,402245],["2026-11",24014,3169,426259],["2026-12",13810,2955,440068]],"cs":[128756,126043,185269],"cp":[5956,24816,25438],"rs":[91213,131110,74255,143491],"rp":[11575,18423,7583,18630],"ss":[0,0,440068],"sc":[["Phones",8896],["Paper",8206],["Accessories",7889],["Copiers",5920],["Chairs",5041],["Storage",4929],["Binders",4858],["Appliances",3616],["Machines",2733],["Furnishings",1972],["Envelopes",1129],["Art",1069],["Labels",709],["Bookcases",325],["Fasteners",152],["Supplies",147],["Tables",-1381]],"shn":[1101,326,284,112],"sha":[222,266,304,202],"ri":[1578,245],"t10":[["Ben Ferrer",1915],["Maria Etezadi",1683],["Karen Ferguson",1608],["Paul Prost",1495],["Robert Marley",1465],["Corinna Mitchell",1353],["Dianna Wilson",1338],["Nathan Mautz",1326],["Eugene Moren",1319],["Rick Huthwaite",1289]],"yr":[["2023",94548,12320],["2024",76552,10977],["2025",106557,12706],["2026",162411,20207]],"qr":{"Central_Q1":621,"South_Q1":3612,"West_Q1":4984,"East_Q1":404,"West_Q2":2705,"East_Q2":3019,"South_Q2":1002,"Central_Q2":3290,"West_Q3":4269,"Central_Q3":2431,"East_Q3":3602,"South_Q3":922,"West_Q4":6672,"South_Q4":2047,"East_Q4":11398,"Central_Q4":5233}},"a:a:a:Furniture:a:a":{"ts":754748,"tp":28160,"am":3.73,"or":1819,"cu":713,"lo":732,"mo":[["2023-01",6308,665,6308],["2023-02",1840,121,8147],["2023-03",15817,-557,23964],["2023-04",7945,554,31909],["2023-05",8505,-238,40414],["2023-06",13206,621,53620],["2023-07",10821,374,64441],["2023-08",7320,663,71761],["2023-09",23816,1954,95578],["2023-10",13136,656,108714],["2023-11",21763,-227,130477],["2023-12",31648,1946,162125],["2024-01",11805,-1250,173930],["2024-02",3134,395,177064],["2024-03",13743,1609,190807],["2024-04",10476,339,201283],["2024-05",9419,720,210702],["2024-06",7714,-135,218416],["2024-07",13674,-325,232090],["2024-08",9639,-487,241729],["2024-09",26273,2703,268002],["2024-10",12027,-496,280028],["2024-11",30881,2717,310909],["2024-12",23546,1079,334455],["2025-01",7688,558,342143],["2025-02",3926,377,346069],["2025-03",14116,-459,360185],["2025-04",13291,881,373476],["2025-05",15160,1711,388636],["2025-06",13231,0,401867],["2025-07",13116,1109,414983],["2025-08",12483,-467,427466],["2025-09",27327,728,454793],["2025-10",11889,6,466682],["2025-11",31784,820,498465],["2025-12",36970,2787,535435],["2026-01",6029,-12,541464],["2026-02",6866,-199,548330],["2026-03",12369,1159,560699],["2026-04",9323,227,570023],["2026-05",17483,24,587506],["2026-06",19009,905,606514],["2026-07",12476,573,618990],["2026-08",15442,641,634432],["2026-09",29097,1772,663529],["2026-10",22246,-954,685774],["2026-11",37057,1170,722831],["2026-12",31917,1404,754748]],"cs":[754748,0,0],"cp":[28160,0,0],"rs":[164538,212232,117299,260680],"rp":[-1923,6250,10159,13675],"ss":[394724,231268,128756],"sc":[["Chairs",26904],["Furnishings",14155],["Bookcases",-1875],["Tables",-11023]],"shn":[1314,439,329,119],"sha":[337,368,337,329],"ri":[1646,555],"t10":[["Nicole Fjeld",1036],["Laura Armstrong",1016],["Joe Elijah",987],["Brenda Bowman",770],["Anne McFarland",739],["Justin Deggeller",721],["Rick Wilson",678],["Clay Ludtke",656],["Anna Andreadi",649],["Seth Vernon",649]],"yr":[["2023",162125,6532],["2024",172330,6868],["2025",200980,8050],["2026",219313,6709]],"qr":{"South_Q1":1765,"Central_Q1":-906,"East_Q1":-1249,"West_Q1":2795,"South_Q2":2329,"Central_Q2":27,"West_Q2":2909,"East_Q2":345,"South_Q3":3700,"West_Q3":4474,"East_Q3":2598,"Central_Q3":-1534,"West_Q4":3497,"Central_Q4":490,"East_Q4":4556,"South_Q4":2364}},"a:a:a:Office Supplies:a:a":{"ts":731893,"tp":122573,"am":16.75,"or":3812,"cu":793,"lo":898,"mo":[["2023-01",4858,792,4858],["2023-02",1072,176,5929],["2023-03",8606,1418,14535],["2023-04",11155,1096,25690],["2023-05",7872,1368,33562],["2023-06",13027,2563,46590],["2023-07",15121,908,61711],["2023-08",12388,3165,74099],["2023-09",27487,2779,101586],["2023-10",7298,1143,108884],["2023-11",26862,5009,135747],["2023-12",18267,2684,154014],["2024-01",1822,595,155836],["2024-02",5368,1113,161204],["2024-03",15892,2963,177096],["2024-04",12559,1210,189655],["2024-05",9185,1721,198840],["2024-06",10648,1703,209487],["2024-07",4720,1114,214207],["2024-08",11894,2225,226101],["2024-09",19337,2650,245438],["2024-10",8673,1117,254111],["2024-11",21218,3354,275329],["2024-12",16355,3439,291684],["2025-01",5313,1544,296997],["2025-02",6794,1330,303791],["2025-03",17347,1535,321138],["2025-04",10647,438,331786],["2025-05",13050,2394,344836],["2025-06",11334,2582,356170],["2025-07",13915,1848,370085],["2025-08",9561,1885,379647],["2025-09",23311,3757,402958],["2025-10",16403,3438,419361],["2025-11",20487,4687,439848],["2025-12",38210,6702,478058],["2026-01",21287,2048,499345],["2026-02",7408,1174,506753],["2026-03",14931,2828,521684],["2026-04",15072,2624,536756],["2026-05",13763,3166,550519],["2026-06",16986,3187,567505],["2026-07",10304,2543,577809],["2026-08",31069,6126,608878],["2026-09",31946,5851,640824],["2026-10",28334,3988,669158],["2026-11",31479,5531,700637],["2026-12",31256,5063,731893]],"cs":[0,731893,0],"cp":[0,122573,0],"rs":[168217,211658,125651,226367],"rp":[12174,41242,19392,49765],"ss":[369536,236314,126043],"sc":[["Paper",34511],["Binders",26740],["Storage",21076],["Appliances",19346],["Envelopes",6988],["Art",6653],["Labels",5573],["Fasteners",1647],["Supplies",40]],"shn":[3710,1174,918,326],"sha":[118,139,111,89],"ri":[5439,689],"t10":[["Brian Moss",1417],["Yana Sorensen",1342],["Sanjit Chand",1321],["Christopher Martinez",1167],["Denny Blanton",1116],["Edward Hooks",1061],["Greg Tran",1048],["Amy Cox",1010],["Adrian Barton",977],["Jonathan Doherty",927]],"yr":[["2023",154014,23102],["2024",137670,23203],["2025",186374,32141],["2026",253835,44128]],"qr":{"Central_Q1":376,"East_Q1":5604,"South_Q1":4869,"West_Q1":6667,"West_Q2":7468,"East_Q2":8638,"South_Q2":4728,"Central_Q2":3219,"South_Q3":5141,"West_Q3":16097,"East_Q3":11610,"Central_Q3":2003,"West_Q4":19534,"South_Q4":4654,"East_Q4":15391,"Central_Q4":6576}},"a:a:a:Technology:a:a":{"ts":839893,"tp":116954,"am":13.92,"or":1560,"cu":687,"lo":271,"mo":[["2023-01",3353,914,3353],["2023-02",1609,566,4961],["2023-03",32511,1516,37472],["2023-04",9195,1934,46668],["2023-05",9943,1380,56611],["2023-06",8436,1349,65047],["2023-07",8004,1266,73051],["2023-08",9210,1887,82261],["2023-09",31367,1372,113628],["2023-10",11979,2038,125607],["2023-11",30201,3094,155808],["2023-12",22093,3533,177901],["2024-01",4835,-160,182736],["2024-02",3449,605,186185],["2024-03",10344,1959,196529],["2024-04",11161,2293,207690],["2024-05",11643,1591,219333],["2024-06",6435,1553,225769],["2024-07",10371,2308,236140],["2024-08",15525,2483,251664],["2024-09",19017,4821,270681],["2024-10",10707,2333,281388],["2024-11",23874,4447,305262],["2024-12",35632,5611,340894],["2025-01",5830,975,346724],["2025-02",12259,1068,358982],["2025-03",21568,1607,380550],["2025-04",14891,1918,395441],["2025-05",28833,3217,424274],["2025-06",16372,2389,440646],["2025-07",13269,1902,453915],["2025-08",9672,927,463587],["2025-09",22883,4289,486470],["2025-10",31540,2485,518010],["2025-11",27141,3881,545151],["2025-12",22323,3308,567474],["2026-01",16943,2864,584417],["2026-02",6027,859,590444],["2026-03",33429,4015,623872],["2026-04",12383,448,636256],["2026-05",13910,2788,650166],["2026-06",17061,2841,667227],["2026-07",23210,3598,690437],["2026-08",17619,2651,708056],["2026-09",27022,4438,735077],["2026-10",32895,3539,767972],["2026-11",49919,5357,817891],["2026-12",22002,4899,839893]],"cs":[0,0,839893],"cp":[0,0,116954],"rs":[170416,267938,148772,252767],"rp":[24477,34281,20216,37979],"ss":[406400,248225,185269],"sc":[["Phones",43696],["Accessories",40710],["Copiers",23953],["Machines",8596]],"shn":[1096,366,301,102],"sha":[454,389,463,598],"ri":[1694,171],"t10":[["Todd Sumrall",1377],["Corinna Mitchell",1284],["Tom Ashbrook",1152],["Ben Ferrer",1126],["Christopher Conant",1116],["James Galang",1109],["Bill Eplett",961],["Robert Marley",941],["Nathan Mautz",920],["Mitch Webber",910]],"yr":[["2023",177901,20849],["2024",162992,29843],["2025",226580,27965],["2026",272419,38297]],"qr":{"South_Q1":4397,"Central_Q1":4241,"East_Q1":1572,"West_Q1":6578,"South_Q2":5312,"West_Q2":8266,"East_Q2":6488,"Central_Q2":3635,"South_Q3":4815,"East_Q3":9167,"Central_Q3":5630,"West_Q3":12329,"West_Q4":10806,"East_Q4":17054,"South_Q4":5692,"Central_Q4":10972}},"a:a:a:a:Standard Class:a":{"ts":1378841,"tp":152971,"am":11.09,"or":3068,"cu":779,"lo":1198,"mo":[["2023-01",11219,2154,11219],["2023-02",2911,412,14130],["2023-03",46881,692,61011],["2023-04",15090,2460,76101],["2023-05",18927,2131,95028],["2023-06",23077,2040,118105],["2023-07",19366,1208,137471],["2023-08",19182,4130,156653],["2023-09",48765,1127,205418],["2023-10",10380,1676,215798],["2023-11",59402,5994,275200],["2023-12",37319,4634,312519],["2024-01",8609,-162,321128],["2024-02",9165,1506,330293],["2024-03",21476,3350,351768],["2024-04",21673,2165,373441],["2024-05",23051,3321,396492],["2024-06",13404,2337,409896],["2024-07",10981,1849,420877],["2024-08",26988,2227,447866],["2024-09",49749,7099,497614],["2024-10",12630,714,510244],["2024-11",48482,5494,558726],["2024-12",39312,4109,598038],["2025-01",14958,2832,612996],["2025-02",7115,896,620111],["2025-03",23364,1078,643474],["2025-04",30150,1623,673624],["2025-05",41332,5658,714956],["2025-06",18240,1907,733196],["2025-07",21881,2564,755078],["2025-08",16954,1289,772031],["2025-09",48772,6703,820803],["2025-10",44484,3866,865287],["2025-11",48136,4418,913423],["2025-12",59620,7904,973043],["2026-01",21272,3144,994315],["2026-02",11623,1161,1005938],["2026-03",24705,3295,1030643],["2026-04",20399,1321,1051042],["2026-05",29920,3618,1080962],["2026-06",26750,3743,1107712],["2026-07",27828,4254,1135540],["2026-08",34891,5751,1170431],["2026-09",46360,7267,1216791],["2026-10",46151,2809,1262942],["2026-11",64160,7376,1327102],["2026-12",51739,5824,1378841]],"cs":[443332,438235,497274],"cp":[15776,70709,66485],"rs":[320291,415029,227614,415907],"rp":[20561,48416,27576,56418],"ss":[716754,417754,244333],"sc":[["Phones",25034],["Accessories",22726],["Paper",19858],["Binders",16973],["Chairs",15833],["Copiers",12949],["Storage",11624],["Appliances",9785],["Furnishings",9295],["Machines",5776],["Envelopes",4333],["Art",4149],["Labels",3056],["Fasteners",1315],["Supplies",-384],["Bookcases",-984],["Tables",-8367]],"shn":[6120,0,0,0],"sha":[225,0,0,0],"ri":[5241,879],"t10":[["Greg Tran",1847],["Clay Ludtke",1828],["Ben Ferrer",1768],["Maria Etezadi",1648],["Seth Vernon",1534],["Justin Deggeller",1515],["Sanjit Chand",1418],["Yana Sorensen",1404],["Todd Sumrall",1363],["Joe Elijah",1331]],"yr":[["2023",312519,28658],["2024",285519,34010],["2025",375005,40741],["2026",405798,49562]],"qr":{"Central_Q1":1246,"East_Q1":3662,"South_Q1":6209,"West_Q1":9242,"East_Q2":11377,"South_Q2":8437,"West_Q2":10301,"Central_Q2":2209,"South_Q3":9807,"East_Q3":11809,"West_Q3":18741,"Central_Q3":5113,"West_Q4":18134,"Central_Q4":11992,"South_Q4":3124,"East_Q4":21568}},"a:a:a:a:Second Class:a":{"ts":466671,"tp":56943,"am":12.2,"or":982,"cu":553,"lo":309,"mo":[["2023-01",2243,428,2243],["2023-02",740,145,2982],["2023-03",6295,1123,9277],["2023-04",9513,531,18790],["2023-05",2838,105,21628],["2023-06",7707,1787,29335],["2023-07",10239,585,39574],["2023-08",6818,1015,46393],["2023-09",19940,2193,66333],["2023-10",9911,1020,76244],["2023-11",9115,968,85359],["2023-12",18041,971,103400],["2024-01",7049,-652,110449],["2024-02",2253,480,112702],["2024-03",6600,966,119302],["2024-04",4088,90,123390],["2024-05",4228,435,127618],["2024-06",3133,529,130751],["2024-07",8205,763,138956],["2024-08",2911,653,141867],["2024-09",7734,1797,149601],["2024-10",7293,1658,156894],["2024-11",13737,2496,170630],["2024-12",23348,4265,193978],["2025-01",3085,75,197063],["2025-02",11278,878,208341],["2025-03",14594,-393,222935],["2025-04",4924,851,227859],["2025-05",6800,1152,234658],["2025-06",12637,1125,247296],["2025-07",8112,1470,255407],["2025-08",7459,768,262867],["2025-09",9409,263,272276],["2025-10",8518,1549,280795],["2025-11",17518,2561,298313],["2025-12",17649,2391,315961],["2026-01",14410,784,330371],["2026-02",5540,700,335912],["2026-03",12123,2192,348035],["2026-04",3050,194,351085],["2026-05",6005,1028,357090],["2026-06",15065,2561,372155],["2026-07",7234,684,379389],["2026-08",19869,2098,399258],["2026-09",21109,1899,420367],["2026-10",3818,312,424185],["2026-11",26109,4456,450293],["2026-12",16378,2994,466671]],"cs":[161506,162943,142222],"cp":[7637,26621,22685],"rs":[103550,118822,93759,150541],"rp":[8104,12956,13711,22172],"ss":[233836,146146,86689],"sc":[["Accessories",8734],["Phones",8378],["Paper",7645],["Chairs",7355],["Storage",5460],["Copiers",5117],["Appliances",4926],["Binders",4084],["Furnishings",2378],["Labels",1467],["Art",1345],["Envelopes",1304],["Machines",457],["Supplies",232],["Fasteners",158],["Bookcases",-1030],["Tables",-1066]],"shn":[0,1979,0,0],"sha":[0,236,0,0],"ri":[1740,239],"t10":[["Helen Wasserman",1265],["Brian Moss",1261],["Denny Blanton",1179],["Dianna Wilson",1144],["Laura Armstrong",1012],["Nicole Fjeld",1000],["Andy Reiter",928],["Dan Reichenbach",926],["Thomas Boland",830],["Karen Carlisle",806]],"yr":[["2023",103400,10871],["2024",90579,13479],["2025",121983,12690],["2026",150709,19903]],"qr":{"West_Q1":3578,"South_Q1":2946,"East_Q1":-152,"Central_Q1":355,"West_Q2":4241,"Central_Q2":3836,"South_Q2":1906,"East_Q2":404,"West_Q3":6882,"Central_Q3":982,"East_Q3":4674,"South_Q3":1650,"West_Q4":7470,"Central_Q4":2930,"East_Q4":8030,"South_Q4":7209}},"a:a:a:a:First Class:a":{"ts":351751,"tp":41518,"am":11.8,"or":795,"cu":494,"lo":296,"mo":[["2023-01",1057,-210,1057],["2023-02",844,316,1900],["2023-03",2219,441,4120],["2023-04",3139,407,7258],["2023-05",3416,233,10674],["2023-06",2279,264,12953],["2023-07",3333,853,16286],["2023-08",2715,473,19001],["2023-09",6586,1303,25587],["2023-10",11152,980,36739],["2023-11",7568,955,44307],["2023-12",15515,2721,59822],["2024-01",2804,0,62626],["2024-02",533,126,63159],["2024-03",10237,1989,73397],["2024-04",6897,1228,80294],["2024-05",2594,430,82887],["2024-06",8238,247,91125],["2024-07",4043,414,95168],["2024-08",6875,1345,102043],["2024-09",6478,1189,108521],["2024-10",4277,354,112798],["2024-11",6709,1411,119507],["2024-12",9599,1178,129106],["2025-01",605,186,129711],["2025-02",2403,287,132114],["2025-03",11282,997,143396],["2025-04",2701,621,146097],["2025-05",4969,149,151066],["2025-06",5754,1156,156820],["2025-07",8197,921,165018],["2025-08",6122,160,171140],["2025-09",11238,1208,182378],["2025-10",4003,-113,186381],["2025-11",12602,2486,198983],["2025-12",12563,1595,211545],["2026-01",8020,972,219566],["2026-02",3138,-26,222704],["2026-03",20471,1503,243175],["2026-04",13224,1760,256399],["2026-05",5845,312,262243],["2026-06",9890,781,272133],["2026-07",4002,354,276135],["2026-08",5808,833,281943],["2026-09",11342,986,293286],["2026-10",29825,3030,323111],["2026-11",14710,52,337821],["2026-12",13930,2663,351751]],"cs":[110760,101625,139366],"cp":[3911,18795,18811],"rs":[58914,113742,49333,129762],"rp":[4469,14798,6714,15537],"ss":[159474,105876,86401],"sc":[["Phones",8231],["Accessories",5780],["Paper",4919],["Binders",4518],["Copiers",3950],["Appliances",3544],["Storage",3012],["Chairs",2541],["Furnishings",2084],["Envelopes",1002],["Machines",850],["Labels",805],["Art",755],["Fasteners",127],["Supplies",113],["Bookcases",-253],["Tables",-461]],"shn":[0,0,1548,0],"sha":[0,0,227,0],"ri":[1323,225],"t10":[["Rick Huthwaite",1140],["Tom Ashbrook",1096],["Fred Hopkins",1061],["Amy Cox",984],["Mitch Webber",901],["Naresj Patel",800],["Resi P\u00f6lking",764],["Adam Bellavance",724],["Eugene Moren",721],["Mark Cousins",668]],"yr":[["2023",59822,8735],["2024",69284,9910],["2025",82440,9653],["2026",140205,13220]],"qr":{"South_Q1":663,"East_Q1":1490,"West_Q1":3173,"Central_Q1":1254,"West_Q2":3009,"East_Q2":2768,"Central_Q2":477,"South_Q2":1335,"West_Q3":3338,"South_Q3":2021,"East_Q3":4662,"Central_Q3":18,"West_Q4":6017,"East_Q4":5878,"Central_Q4":2721,"South_Q4":2695}},"a:a:a:a:Same Day:a":{"ts":129272,"tp":16256,"am":12.58,"or":266,"cu":227,"lo":98,"mo":[["2023-02",25,-11,25],["2023-03",1539,121,1565],["2023-04",554,186,2119],["2023-05",1139,41,3257],["2023-06",1607,442,4864],["2023-07",1008,-98,5872],["2023-08",203,98,6075],["2023-09",7379,1483,13454],["2023-10",970,161,14424],["2023-11",2742,-42,17166],["2023-12",1134,-163,18300],["2024-03",1666,225,19966],["2024-04",1537,359,21503],["2024-05",374,-155,21877],["2024-06",23,9,21899],["2024-07",5536,71,27436],["2024-08",282,-5,27718],["2024-09",666,89,28384],["2024-10",7208,228,35592],["2024-11",7046,1118,42638],["2024-12",3274,577,45911],["2025-01",182,-16,46093],["2025-02",2183,713,48277],["2025-03",3792,1000,52068],["2025-04",1054,142,53123],["2025-05",3942,363,57064],["2025-06",4307,783,61371],["2025-07",2110,-96,63480],["2025-08",1181,128,64662],["2025-09",4102,599,68764],["2025-10",2826,626,71590],["2025-11",1157,-78,72746],["2025-12",7671,907,80417],["2026-01",557,0,80974],["2026-03",3429,1012,84403],["2026-04",106,24,84509],["2026-05",3387,1021,87896],["2026-06",1351,-153,89246],["2026-07",6925,1421,96171],["2026-08",3561,736,99733],["2026-09",9254,1909,108986],["2026-10",3681,423,112667],["2026-11",13476,173,126143],["2026-12",3129,-115,129272]],"cs":[39149,29090,61033],"cp":[836,6448,8972],"rs":[20415,44236,21017,43604],"rp":[1595,5603,1766,7293],"ss":[60596,46030,22645],"sc":[["Accessories",3470],["Paper",2088],["Phones",2053],["Copiers",1936],["Machines",1513],["Chairs",1174],["Binders",1165],["Appliances",1092],["Storage",980],["Art",403],["Furnishings",399],["Bookcases",393],["Envelopes",349],["Labels",246],["Supplies",79],["Fasteners",46],["Tables",-1129]],"shn":[0,0,0,547],"sha":[0,0,0,236],"ri":[475,72],"t10":[["Keith Dawkins",850],["Jim Kriz",816],["Darrin Martin",804],["Paul Prost",691],["Gary Zandusky",646],["Ionia McGrath",579],["Harold Ryan",570],["Pauline Johnson",563],["Jennifer Ferguson",527],["Bart Pistole",510]],"yr":[["2023",18300,2219],["2024",27611,2515],["2025",34506,5073],["2026",48855,6450]],"qr":{"Central_Q1":856,"South_Q1":1213,"East_Q1":927,"South_Q2":693,"West_Q2":1091,"East_Q2":921,"Central_Q2":358,"Central_Q3":-14,"West_Q3":3939,"East_Q3":2230,"South_Q3":179,"East_Q4":1525,"South_Q4":-319,"West_Q4":2216,"Central_Q4":394,"West_Q1":47}},"a:a:a:a:a:Safe":{"ts":1961774,"tp":351465,"am":17.92,"or":4675,"cu":798,"lo":531,"mo":[["2023-01",13938,2937,13938],["2023-02",4445,937,18383],["2023-03",26203,4497,44586],["2023-04",25306,4332,69893],["2023-05",19359,4001,89252],["2023-06",29157,5623,118409],["2023-07",29186,3352,147595],["2023-08",26071,6693,173666],["2023-09",57430,9876,231096],["2023-10",29215,4742,260311],["2023-11",66357,10636,326668],["2023-12",62227,10450,388896],["2024-01",8394,1281,397290],["2024-02",10960,2302,408250],["2024-03",36707,7302,444957],["2024-04",29724,5667,474681],["2024-05",27283,4939,501964],["2024-06",22848,4299,524812],["2024-07",23685,4456,548496],["2024-08",33093,5407,581589],["2024-09",57620,11573,639209],["2024-10",26910,4266,666118],["2024-11",67676,13071,733794],["2024-12",63973,13106,797767],["2025-01",17423,3653,815190],["2025-02",21903,3164,837093],["2025-03",43823,5127,880916],["2025-04",34869,4745,915785],["2025-05",44779,7905,960565],["2025-06",36125,6207,996690],["2025-07",34670,6147,1031360],["2025-08",26446,3935,1057806],["2025-09",59661,12279,1117467],["2025-10",55628,7675,1173095],["2025-11",62029,12318,1235125],["2025-12",89200,15674,1324325],["2026-01",39482,6322,1363807],["2026-02",16705,3165,1380512],["2026-03",55215,9653,1435727],["2026-04",30538,4883,1466265],["2026-05",40348,7712,1506613],["2026-06",46857,8519,1553469],["2026-07",38238,8575,1591708],["2026-08",54272,11082,1645980],["2026-09",77587,15617,1723567],["2026-10",70610,10137,1794177],["2026-11",94721,15944,1888898],["2026-12",72876,15282,1961774]],"cs":[558324,691653,711797],"cp":[73480,148610,129375],"rs":[373977,544027,321005,722765],"rp":[69283,109555,61125,111502],"ss":[980907,616273,364593],"sc":[["Phones",49879],["Binders",45885],["Accessories",40710],["Paper",34517],["Chairs",33284],["Appliances",26123],["Copiers",22320],["Storage",21129],["Furnishings",20026],["Machines",16468],["Tables",12950],["Bookcases",7220],["Envelopes",6988],["Art",6677],["Labels",5604],["Fasteners",1647],["Supplies",40]],"shn":[5241,1740,1323,475],"sha":[219,231,229,224],"ri":[8779,0],"t10":[["Brian Moss",2203],["Ben Ferrer",2083],["Helen Wasserman",2058],["Greg Tran",1941],["Laura Armstrong",1938],["Clay Ludtke",1934],["Maria Etezadi",1754],["Dan Reichenbach",1686],["Todd Sumrall",1679],["Joe Elijah",1662]],"yr":[["2023",388896,68077],["2024",408871,77670],["2025",526558,88828],["2026",637449,116890]],"qr":{"Central_Q1":10142,"East_Q1":11319,"South_Q1":12194,"West_Q1":16685,"West_Q2":19959,"East_Q2":19583,"South_Q2":14286,"Central_Q2":15005,"West_Q3":34969,"South_Q3":16240,"East_Q3":31833,"Central_Q3":15949,"West_Q4":39889,"South_Q4":18405,"East_Q4":46819,"Central_Q4":28187}},"a:a:a:a:a:High Risk":{"ts":364760,"tp":-83778,"am":-22.97,"or":1039,"cu":568,"lo":1370,"mo":[["2023-01",580,-565,580],["2023-02",75,-75,655],["2023-03",30731,-2120,31386],["2023-04",2989,-747,34375],["2023-05",6961,-1491,41335],["2023-06",5512,-1090,46848],["2023-07",4761,-804,51608],["2023-08",2847,-977,54455],["2023-09",25240,-3771,79695],["2023-10",3198,-906,82894],["2023-11",12470,-2761,95363],["2023-12",9781,-2287,105144],["2024-01",10068,-2096,115212],["2024-02",991,-189,116204],["2024-03",3272,-772,119475],["2024-04",4472,-1826,123947],["2024-05",2964,-908,126911],["2024-06",1949,-1178,128860],["2024-07",5081,-1359,133941],["2024-08",3964,-1187,137905],["2024-09",7007,-1399,144912],["2024-10",4497,-1313,149410],["2024-11",8296,-2553,157706],["2024-12",11560,-2977,169266],["2025-01",1408,-576,170674],["2025-02",1076,-389,171749],["2025-03",9208,-2445,180957],["2025-04",3960,-1508,184917],["2025-05",12263,-582,197180],["2025-06",4812,-1236,201992],["2025-07",5631,-1288,207623],["2025-08",5270,-1590,212893],["2025-09",13861,-3505,226755],["2025-10",4203,-1747,230957],["2025-11",17383,-2930,248340],["2025-12",8302,-2877,256642],["2026-01",4778,-1422,261419],["2026-02",3596,-1331,265015],["2026-03",5513,-1652,270528],["2026-04",6241,-1584,276769],["2026-05",4808,-1733,281577],["2026-06",6199,-1586,287777],["2026-07",7751,-1862,295528],["2026-08",9857,-1664,305385],["2026-09",10477,-3555,315862],["2026-10",12865,-3564,328727],["2026-11",23734,-3886,352461],["2026-12",12299,-3916,364760]],"cs":[196423,40240,128096],"cp":[-45320,-26037,-12421],"rs":[129193,147801,70717,17049],"rp":[-34555,-27782,-11358,-10083],"ss":[189752,99533,75475],"sc":[["Copiers",1633],["Paper",-6],["Art",-24],["Labels",-31],["Storage",-53],["Furnishings",-5871],["Phones",-6183],["Chairs",-6380],["Appliances",-6777],["Machines",-7872],["Bookcases",-9095],["Binders",-19145],["Tables",-23973]],"shn":[879,239,225,72],"sha":[261,270,214,317],"ri":[0,1415],"t10":[["Christopher Conant",539],["Eugene Barchas",111],["Christy Brittain",108],["Sally Knutson",93],["Kean Thornton",70],["Brooke Gillingham",58],["Grace Kelly",56],["Ann Steele",45],["Frank Hawley",44],["Gary Zandusky",42]],"yr":[["2023",105144,-17594],["2024",64121,-17756],["2025",87376,-20672],["2026",108118,-27756]],"qr":{"Central_Q1":-6431,"East_Q1":-5392,"West_Q1":-645,"South_Q1":-1163,"East_Q2":-4112,"Central_Q2":-8124,"South_Q2":-1916,"West_Q2":-1317,"South_Q3":-2584,"East_Q3":-8459,"Central_Q3":-9850,"West_Q3":-2068,"Central_Q4":-10150,"East_Q4":-9818,"South_Q4":-5696,"West_Q4":-6052}},"2023:Central:a:a:a:a":{"ts":103838,"tp":2744,"am":2.64,"or":230,"cu":204,"lo":168,"mo":[["2023-01",1540,118,1540],["2023-02",1233,295,2773],["2023-03",5828,-127,8601],["2023-04",3712,229,12313],["2023-05",4048,-506,16361],["2023-06",9646,1236,26008],["2023-07",6741,-666,32748],["2023-08",3022,628,35771],["2023-09",34409,-933,70179],["2023-10",8966,1286,79145],["2023-11",14058,374,93203],["2023-12",10636,809,103838]],"cs":[32910,37002,33927],"cp":[-1124,1655,2213],"rs":[103838,0,0,0],"rp":[2744,0,0,0],"ss":[67316,19902,16620],"sc":[["Phones",1481],["Copiers",980],["Paper",896],["Accessories",891],["Chairs",585],["Envelopes",571],["Labels",482],["Storage",344],["Art",188],["Fasteners",16],["Supplies",10],["Bookcases",-134],["Appliances",-220],["Furnishings",-247],["Binders",-632],["Machines",-1139],["Tables",-1329]],"shn":[303,90,62,11],"sha":[225,228,230,79],"ri":[320,146],"t10":[["Dianna Wilson",1144],["Sanjit Chand",608],["Resi P\u00f6lking",583],["Hunter Glantz",562],["Adrian Barton",499],["Matt Abelman",436],["Sue Ann Reed",342],["Rick Bensley",337],["Bradley Drucker",309],["Tom Boeckenhauer",292]],"yr":[["2023",103838,2744],["2024",0,0],["2025",0,0],["2026",0,0]],"qr":{"Central_Q1":287,"Central_Q2":959,"Central_Q3":-970,"Central_Q4":2469}},"2023:East:a:a:a:a":{"ts":135440,"tp":15016,"am":11.09,"or":281,"cu":238,"lo":117,"mo":[["2023-01",717,50,717],["2023-02",200,63,917],["2023-03",5943,-432,6861],["2023-04",3055,-125,9915],["2023-05",9053,1267,18969],["2023-06",10834,1038,29802],["2023-07",3568,847,33370],["2023-08",5591,1249,38962],["2023-09",26186,3820,65147],["2023-10",9119,511,74267],["2023-11",34149,3200,108416],["2023-12",27024,3528,135440]],"cs":[49563,38159,47718],"cp":[640,7347,7029],"rs":[0,135440,0,0],"rp":[0,15016,0,0],"ss":[78971,39244,17225],"sc":[["Phones",2979],["Chairs",2964],["Paper",1966],["Accessories",1715],["Binders",1564],["Appliances",1514],["Machines",1215],["Storage",1136],["Copiers",1119],["Furnishings",897],["Envelopes",524],["Art",354],["Labels",225],["Fasteners",80],["Supplies",-17],["Bookcases",-426],["Tables",-2795]],"shn":[350,97,81,32],"sha":[241,264,185,332],"ri":[464,96],"t10":[["Mitch Webber",901],["Katherine Murray",899],["Nathan Mautz",817],["Darrin Martin",798],["Yoseph Carroll",612],["Frank Gastineau",611],["Greg Tran",582],["John Murray",570],["Tom Boeckenhauer",570],["Rick Reed",544]],"yr":[["2023",135440,15016],["2024",0,0],["2025",0,0],["2026",0,0]],"qr":{"East_Q1":-320,"East_Q2":2181,"East_Q3":5916,"East_Q4":7238}},"2023:South:a:a:a:a":{"ts":103846,"tp":12820,"am":12.34,"or":165,"cu":156,"lo":40,"mo":[["2023-01",9322,2170,9322],["2023-02",2029,279,11351],["2023-03",32911,1207,44262],["2023-04",12185,1851,56447],["2023-05",5779,930,62226],["2023-06",4560,978,66786],["2023-07",1829,420,68615],["2023-08",7057,1352,75672],["2023-09",7175,275,82847],["2023-10",4814,654,87661],["2023-11",7429,1343,95090],["2023-12",8756,1361,103846]],"cs":[26968,25959,50919],"cp":[3824,4336,4659],"rs":[0,0,103846,0],"rp":[0,0,12820,0],"ss":[32311,34685,36850],"sc":[["Phones",3746],["Chairs",2128],["Accessories",1686],["Binders",1485],["Paper",1339],["Tables",1108],["Appliances",490],["Storage",462],["Furnishings",423],["Labels",170],["Bookcases",165],["Art",134],["Envelopes",108],["Supplies",99],["Copiers",90],["Fasteners",51],["Machines",-862]],"shn":[207,73,52,17],"sha":[351,261,185,153],"ri":[322,27],"t10":[["Maria Etezadi",1167],["Ruben Ausman",776],["Mitch Willingham",743],["Kristen Hastings",699],["Penelope Sewall",623],["Nick Crebassa",576],["Sanjit Chand",572],["Corey Catlett",481],["Alan Schoenberger",445],["Chris Selesnick",437]],"yr":[["2023",103846,12820],["2024",0,0],["2025",0,0],["2026",0,0]],"qr":{"South_Q1":3656,"South_Q2":3759,"South_Q3":2046,"South_Q4":3358}},"2023:West:a:a:a:a":{"ts":150916,"tp":19903,"am":13.19,"or":319,"cu":271,"lo":59,"mo":[["2023-01",2939,33,2939],["2023-02",1058,225,3997],["2023-03",12252,1729,16248],["2023-04",9343,1629,25592],["2023-05",7439,818,33031],["2023-06",9629,1280,42660],["2023-07",21809,1947,64469],["2023-08",13248,2487,77717],["2023-09",14901,2944,92618],["2023-10",9515,1386,102132],["2023-11",23192,2959,125324],["2023-12",25593,2466,150916]],"cs":[52684,52894,45338],"cp":[3192,9764,6947],"rs":[0,0,0,150916],"rp":[0,0,0,19903],"ss":[90102,36961,23853],"sc":[["Phones",2824],["Paper",2387],["Binders",2307],["Storage",2048],["Accessories",1938],["Furnishings",1223],["Machines",1181],["Chairs",1178],["Appliances",1071],["Copiers",1005],["Art",759],["Tables",735],["Labels",410],["Supplies",404],["Envelopes",293],["Fasteners",86],["Bookcases",57]],"shn":[418,128,98,32],"sha":[209,298,214,132],"ri":[659,17],"t10":[["Sample Company A",765],["Lena Radford",605],["Jack Garza",598],["Mary Zewe",594],["Gary Hwang",582],["Valerie Dominguez",577],["Joseph Holt",570],["Thomas Seio",488],["Anthony Johnson",480],["Arthur Prichep",417]],"yr":[["2023",150916,19903],["2024",0,0],["2025",0,0],["2026",0,0]],"qr":{"West_Q1":1987,"West_Q2":3728,"West_Q3":7377,"West_Q4":6811}},"2024:Central:a:a:a:a":{"ts":102874,"tp":9829,"am":9.55,"or":234,"cu":201,"lo":153,"mo":[["2024-01",2511,-477,2511],["2024-02",2528,331,5038],["2024-03",6730,210,11768],["2024-04",11642,725,23410],["2024-05",8624,764,32034],["2024-06",3713,-126,35748],["2024-07",7606,305,43353],["2024-08",9301,727,52655],["2024-09",7579,1563,60233],["2024-10",7000,87,67234],["2024-11",18903,3262,86137],["2024-12",16738,2459,102874]],"cs":[35592,25461,41821],"cp":[-54,1753,8130],"rs":[102874,0,0,0],"rp":[9829,0,0,0],"ss":[49662,29080,24132],"sc":[["Phones",3307],["Copiers",3122],["Accessories",1531],["Chairs",1515],["Paper",1399],["Storage",437],["Envelopes",347],["Art",248],["Binders",234],["Machines",170],["Labels",127],["Fasteners",25],["Supplies",22],["Tables",-52],["Furnishings",-758],["Bookcases",-760],["Appliances",-1086]],"shn":[286,107,49,34],"sha":[217,210,242,189],"ri":[341,135],"t10":[["Philisse Overcash",644],["Shirley Daniels",618],["Dana Kaydos",610],["Bill Donatelli",599],["Harry Marie",574],["Todd Sumrall",570],["Mike Pelletier",538],["Sarah Brown",481],["Nora Pelletier",450],["Anna Andreadi",439]],"yr":[["2023",0,0],["2024",102874,9829],["2025",0,0],["2026",0,0]],"qr":{"Central_Q1":63,"Central_Q2":1363,"Central_Q3":2595,"Central_Q4":5807}},"2024:East:a:a:a:a":{"ts":157071,"tp":21181,"am":13.48,"or":307,"cu":251,"lo":121,"mo":[["2024-01",4959,-843,4959],["2024-02",6463,1106,11422],["2024-03",6021,1478,17443],["2024-04",7779,1017,25222],["2024-05",7597,1198,32819],["2024-06",7443,1121,40262],["2024-07",11873,2159,52134],["2024-08",9622,928,61757],["2024-09",29472,3876,91229],["2024-10",6302,1460,97531],["2024-11",34725,5187,132256],["2024-12",24816,2495,157071]],"cs":[54025,42978,60069],"cp":[1311,9639,10232],"rs":[0,157071,0,0],"rp":[0,21181,0,0],"ss":[85354,45068,26650],"sc":[["Accessories",4427],["Binders",3505],["Phones",3358],["Chairs",2489],["Paper",1812],["Storage",1735],["Appliances",1688],["Machines",1236],["Copiers",1210],["Furnishings",719],["Art",383],["Envelopes",364],["Labels",213],["Fasteners",61],["Bookcases",-13],["Supplies",-123],["Tables",-1884]],"shn":[387,129,112,36],"sha":[224,213,262,377],"ri":[567,97],"t10":[["Greg Tran",896],["Keith Dawkins",850],["Valerie Dominguez",810],["Naresj Patel",800],["Pierre Wener",712],["Natalie Webber",638],["Dean percer",601],["Matt Abelman",600],["Lena Creighton",596],["Craig Carroll",592]],"yr":[["2023",0,0],["2024",157071,21181],["2025",0,0],["2026",0,0]],"qr":{"East_Q1":1741,"East_Q2":3335,"East_Q3":6962,"East_Q4":9142}},"2024:South:a:a:a:a":{"ts":71360,"tp":8585,"am":12.03,"or":170,"cu":155,"lo":59,"mo":[["2024-01",4966,-95,4966],["2024-02",1157,223,6122],["2024-03",10322,1375,16444],["2024-04",5718,767,22163],["2024-05",1984,429,24146],["2024-06",8552,1092,32699],["2024-07",2197,608,34896],["2024-08",5585,1326,40481],["2024-09",13677,2284,54158],["2024-10",4086,-373,58244],["2024-11",7796,320,66040],["2024-12",5320,628,71360]],"cs":[24104,31253,16003],"cp":[1830,3102,3653],"rs":[0,0,71360,0],"rp":[0,0,8585,0],"ss":[49206,18107,4046],"sc":[["Phones",1942],["Furnishings",1172],["Chairs",1100],["Appliances",963],["Paper",949],["Accessories",828],["Envelopes",622],["Machines",568],["Labels",534],["Copiers",315],["Art",293],["Bookcases",108],["Fasteners",46],["Supplies",15],["Binders",-77],["Storage",-242],["Tables",-550]],"shn":[242,47,40,11],"sha":[199,279,227,96],"ri":[300,40],"t10":[["Katrina Willman",759],["Giulietta Baptist",756],["Jamie Kunitz",631],["Christopher Martinez",590],["Natalie Webber",507],["Lauren Leatherbury",398],["Theresa Swint",382],["Fred Harton",364],["Dave Hallsten",346],["Patrick Jones",339]],"yr":[["2023",0,0],["2024",71360,8585],["2025",0,0],["2026",0,0]],"qr":{"South_Q1":1503,"South_Q2":2289,"South_Q3":4218,"South_Q4":575}},"2024:West:a:a:a:a":{"ts":141687,"tp":20320,"am":14.34,"or":342,"cu":277,"lo":67,"mo":[["2024-01",6027,600,6027],["2024-02",1804,454,7831],["2024-03",16905,3467,24736],["2024-04",9056,1333,33792],["2024-05",12043,1641,45835],["2024-06",5089,1034,50924],["2024-07",7090,24,58013],["2024-08",12548,1239,70562],["2024-09",13899,2451,84461],["2024-10",14019,1779,98480],["2024-11",14549,1750,113028],["2024-12",28659,4547,141687]],"cs":[58610,37978,45100],"cp":[3782,8709,7829],"rs":[0,0,0,141687],"rp":[0,0,0,20320],"ss":[83110,36853,21724],"sc":[["Accessories",3150],["Paper",2420],["Furnishings",2060],["Appliances",1893],["Copiers",1890],["Phones",1850],["Storage",1604],["Tables",1162],["Chairs",1075],["Binders",1026],["Machines",938],["Envelopes",644],["Art",561],["Labels",449],["Supplies",62],["Fasteners",51],["Bookcases",-516]],"shn":[392,142,88,28],"sha":[226,194,215,235],"ri":[626,24],"t10":[["Fred Hopkins",1020],["John Lucas",726],["James Galang",641],["George Ashbrook",626],["Tamara Willingham",598],["Ellis Ballard",570],["Robert Marley",557],["Clay Ludtke",491],["Joseph Holt",433],["Becky Pak",432]],"yr":[["2023",0,0],["2024",141687,20320],["2025",0,0],["2026",0,0]],"qr":{"West_Q1":4521,"West_Q2":4008,"West_Q3":3714,"West_Q4":8076}},"2025:Central:a:a:a:a":{"ts":148605,"tp":10275,"am":6.91,"or":307,"cu":262,"lo":174,"mo":[["2025-01",5942,700,5942],["2025-02",1116,-143,7058],["2025-03",13154,-132,20212],["2025-04",7462,195,27674],["2025-05",11744,1246,39418],["2025-06",6553,235,45971],["2025-07",9933,999,55904],["2025-08",6983,196,62887],["2025-09",17503,-141,80390],["2025-10",25969,2760,106359],["2025-11",16910,1471,123269],["2025-12",25335,2889,148605]],"cs":[50837,46905,50863],"cp":[-57,4402,5931],"rs":[148605,0,0,0],"rp":[10275,0,0,0],"ss":[67882,60714,20008],"sc":[["Phones",3415],["Paper",2205],["Accessories",1888],["Chairs",1361],["Storage",785],["Binders",631],["Copiers",570],["Tables",519],["Envelopes",372],["Art",261],["Labels",205],["Appliances",197],["Fasteners",83],["Machines",57],["Supplies",-338],["Bookcases",-463],["Furnishings",-1474]],"shn":[395,129,63,22],"sha":[269,219,142,226],"ri":[457,152],"t10":[["Tamara Chand",932],["Laura Armstrong",895],["Frank Carlisle",791],["Justin Ellison",760],["Alejandro Grove",696],["Adrian Barton",570],["Bobby Elias",544],["Eugene Moren",509],["Jack O'Briant",457],["Andrew Allen",420]],"yr":[["2023",0,0],["2024",0,0],["2025",148605,10275],["2026",0,0]],"qr":{"Central_Q1":426,"Central_Q2":1675,"Central_Q3":1055,"Central_Q4":7120}},"2025:East:a:a:a:a":{"ts":182750,"tp":20098,"am":11.0,"or":391,"cu":316,"lo":153,"mo":[["2025-01",5148,890,5148],["2025-02",3150,574,8298],["2025-03",16837,846,25135],["2025-04",17840,1743,42975],["2025-05",22644,2407,65619],["2025-06",12330,1775,77949],["2025-07",8524,317,86474],["2025-08",9866,695,96340],["2025-09",20310,2793,116650],["2025-10",15065,1660,131716],["2025-11",22982,1423,154698],["2025-12",28052,4977,182750]],"cs":[46991,63052,72707],"cp":[1459,11803,6836],"rs":[0,182750,0,0],"rp":[0,20098,0,0],"ss":[95419,53786,33545],"sc":[["Binders",3036],["Storage",2809],["Appliances",2336],["Phones",2267],["Copiers",2242],["Furnishings",2173],["Paper",2136],["Chairs",1862],["Accessories",1260],["Machines",1067],["Envelopes",557],["Art",519],["Labels",304],["Fasteners",132],["Supplies",-27],["Bookcases",-297],["Tables",-2279]],"shn":[476,139,135,47],"sha":[257,180,189,213],"ri":[668,129],"t10":[["Caroline Jumper",793],["Deborah Brumfield",773],["Rick Huthwaite",758],["Gary Zandusky",640],["Daniel Raglin",619],["Adam Bellavance",616],["Bill Shonely",585],["Corinna Mitchell",577],["Grace Kelly",570],["Carol Adams",570]],"yr":[["2023",0,0],["2024",0,0],["2025",182750,20098],["2026",0,0]],"qr":{"East_Q1":2310,"East_Q2":5924,"East_Q3":3805,"East_Q4":8059}},"2025:South:a:a:a:a":{"ts":93610,"tp":14129,"am":15.09,"or":214,"cu":186,"lo":70,"mo":[["2025-01",4082,842,4082],["2025-02",15613,1955,19696],["2025-03",4238,564,23934],["2025-04",2966,427,26899],["2025-05",11960,2186,38860],["2025-06",3456,686,42316],["2025-07",6562,972,48878],["2025-08",3050,173,51928],["2025-09",12023,2266,63951],["2025-10",3165,383,67117],["2025-11",15597,2051,82713],["2025-12",10897,1624,93610]],"cs":[27921,28667,37022],"cp":[3146,5135,5848],"rs":[0,0,93610,0],"rp":[0,0,14129,0],"ss":[53104,26695,13811],"sc":[["Accessories",2461],["Paper",1724],["Phones",1508],["Furnishings",1278],["Chairs",1276],["Machines",1189],["Storage",1088],["Appliances",1035],["Copiers",690],["Bookcases",553],["Binders",553],["Envelopes",400],["Art",353],["Labels",133],["Tables",39],["Fasteners",35],["Supplies",-185]],"shn":[231,89,59,34],"sha":[190,343,210,200],"ri":[361,52],"t10":[["Anna H\u00e4berlin",1009],["Paul Prost",689],["Mark Cousins",668],["Jonathan Doherty",654],["Ben Ferrer",639],["Sanjit Engle",595],["Jill Fjeld",575],["Karen Carlisle",528],["Randy Ferguson",435],["Meg Tillman",421]],"yr":[["2023",0,0],["2024",0,0],["2025",93610,14129],["2026",0,0]],"qr":{"South_Q1":3361,"South_Q2":3299,"South_Q3":3410,"South_Q4":4059}},"2025:West:a:a:a:a":{"ts":188969,"tp":23654,"am":12.52,"or":428,"cu":330,"lo":88,"mo":[["2025-01",3658,644,3658],["2025-02",3100,388,6758],["2025-03",18802,1405,25560],["2025-04",10561,873,36121],["2025-05",10694,1484,46815],["2025-06",18598,2275,65413],["2025-07",15281,2571,80694],["2025-08",11818,1282,92512],["2025-09",23685,3855,116197],["2025-10",15631,1126,131828],["2025-11",23923,4443,155751],["2025-12",33218,3306,188969]],"cs":[75231,47750,65988],"cp":[3502,10802,9351],"rs":[0,0,0,188969],"rp":[0,0,0,23654],"ss":[83310,66466,39193],"sc":[["Accessories",3816],["Paper",3023],["Binders",2801],["Copiers",2577],["Phones",2372],["Furnishings",2225],["Storage",1533],["Appliances",1461],["Chairs",1303],["Envelopes",746],["Machines",585],["Labels",519],["Bookcases",340],["Art",330],["Supplies",325],["Fasteners",63],["Tables",-366]],"shn":[484,143,133,55],"sha":[212,267,267,231],"ri":[778,37],"t10":[["Toby Gnade",845],["Joe Elijah",676],["Max Jones",655],["Neoma Murray",638],["Sung Pak",619],["Dennis Pardue",617],["Christopher Conant",591],["Ionia McGrath",582],["Kelly Collister",574],["Edward Hooks",573]],"yr":[["2023",0,0],["2024",0,0],["2025",188969,23654],["2026",0,0]],"qr":{"West_Q1":2438,"West_Q2":4633,"West_Q3":7709,"West_Q4":8875}},"2026:Central:a:a:a:a":{"ts":147853,"tp":11880,"am":8.03,"or":408,"cu":326,"lo":252,"mo":[["2026-01",21691,1651,21691],["2026-02",3335,-779,25025],["2026-03",15505,2063,40530],["2026-04",3383,125,43913],["2026-05",11589,1765,55502],["2026-06",12967,994,68469],["2026-07",9598,1118,78067],["2026-08",6253,531,84320],["2026-09",17343,1770,101663],["2026-10",12153,410,113815],["2026-11",15155,572,128970],["2026-12",18883,1659,147853]],"cs":[45199,58849,43805],"cp":[-688,4364,8203],"rs":[147853,0,0,0],"rp":[11880,0,0,0],"ss":[69101,48300,30452],"sc":[["Phones",3946],["Chairs",2787],["Accessories",2682],["Paper",2472],["Copiers",1014],["Machines",562],["Art",498],["Envelopes",488],["Storage",408],["Labels",260],["Supplies",118],["Fasteners",112],["Binders",93],["Appliances",-83],["Bookcases",-511],["Furnishings",-1174],["Tables",-1790]],"shn":[463,139,129,53],"sha":[181,232,185,154],"ri":[570,214],"t10":[["Helen Wasserman",1037],["Bill Eplett",975],["Brian Moss",830],["Tonja Turnell",830],["Theone Pippenger",754],["Andy Reiter",668],["Bart Watters",570],["Robert Dilbeck",570],["Amy Cox",570],["Juliana Krohn",570]],"yr":[["2023",0,0],["2024",0,0],["2025",0,0],["2026",147853,11880]],"qr":{"Central_Q1":2935,"Central_Q2":2884,"Central_Q3":3420,"Central_Q4":2642}},"2026:East:a:a:a:a":{"ts":216567,"tp":25479,"am":11.76,"or":496,"cu":363,"lo":183,"mo":[["2026-01",5671,447,5671],["2026-02",4969,494,10640],["2026-03",8313,1255,18953],["2026-04",10231,1148,29184],["2026-05",6145,856,35329],["2026-06",15236,2027,50565],["2026-07",12322,1184,62886],["2026-08",21767,2091,84654],["2026-09",32546,3416,117199],["2026-10",32346,3233,149546],["2026-11",45640,5797,195186],["2026-12",21381,3531,216567]],"cs":[61653,67470,87444],"cp":[2840,12454,10185],"rs":[0,216567,0,0],"rp":[0,25479,0,0],"ss":[97399,65478,53691],"sc":[["Phones",3567],["Paper",3536],["Accessories",3359],["Appliances",2806],["Chairs",2718],["Storage",2476],["Furnishings",2355],["Binders",2246],["Copiers",1761],["Machines",1497],["Art",732],["Labels",413],["Envelopes",367],["Bookcases",345],["Fasteners",111],["Supplies",-234],["Tables",-2577]],"shn":[570,183,168,44],"sha":[214,223,261,228],"ri":[808,157],"t10":[["Seth Vernon",1500],["Tom Ashbrook",1171],["Brian Moss",1108],["Todd Sumrall",793],["Doug Jacobs",670],["Pete Kriz",615],["Karen Ferguson",581],["Justin Deggeller",578],["Steven Roelle",578],["Hunter Lopez",576]],"yr":[["2023",0,0],["2024",0,0],["2025",0,0],["2026",216567,25479]],"qr":{"East_Q1":2196,"East_Q2":4031,"East_Q3":6691,"East_Q4":12561}},"2026:South:a:a:a:a":{"ts":122906,"tp":14233,"am":11.58,"or":273,"cu":223,"lo":90,"mo":[["2026-01",4816,516,4816],["2026-02",2183,470,6998],["2026-03",6644,1524,13642],["2026-04",9448,662,23090],["2026-05",10944,1229,34034],["2026-06",8934,1133,42968],["2026-07",3302,578,46270],["2026-08",10372,1107,56641],["2026-09",10201,2296,66842],["2026-10",12137,99,78979],["2026-11",28717,2244,107696],["2026-12",15210,2375,122906]],"cs":[38305,39772,44828],"cp":[1358,6818,6057],"rs":[0,0,122906,0],"rp":[0,0,14233,0],"ss":[60960,42399,19547],"sc":[["Phones",3037],["Accessories",1947],["Paper",1935],["Chairs",1931],["Appliances",1512],["Copiers",1452],["Binders",1444],["Storage",992],["Furnishings",569],["Bookcases",514],["Envelopes",336],["Art",279],["Labels",204],["Supplies",74],["Fasteners",42],["Machines",-380],["Tables",-1656]],"shn":[294,120,83,21],"sha":[215,258,220,502],"ri":[466,52],"t10":[["Thomas Boland",830],["John Lee",705],["Alan Hwang",675],["Jim Epp",618],["Bradley Drucker",594],["Denise Monton",586],["Joel Eaton",544],["Katherine Hughes",495],["Shahid Collister",425],["Michelle Huthwaite",378]],"yr":[["2023",0,0],["2024",0,0],["2025",0,0],["2026",122906,14233]],"qr":{"South_Q1":2510,"South_Q2":3023,"South_Q3":3981,"South_Q4":4718}},"2026:West:a:a:a:a":{"ts":258241,"tp":37542,"am":14.54,"or":546,"cu":397,"lo":107,"mo":[["2026-01",12082,2286,12082],["2026-02",9815,1648,21897],["2026-03",30267,3160,52164],["2026-04",13717,1365,65881],["2026-05",16478,2129,82359],["2026-06",15920,2780,98278],["2026-07",20768,3833,119046],["2026-08",25738,5688,144784],["2026-09",27975,4579,172759],["2026-10",26839,2831,199598],["2026-11",28942,3443,228540],["2026-12",29701,3800,258241]],"cs":[74155,87744,96342],"cp":[3199,20491,13853],"rs":[0,0,0,258241],"rp":[0,0,0,37542],"ss":[107452,92067,58721],"sc":[["Accessories",7130],["Binders",6524],["Paper",4311],["Copiers",3915],["Appliances",3769],["Storage",3461],["Furnishings",2714],["Phones",2097],["Labels",925],["Art",762],["Machines",711],["Tables",691],["Fasteners",652],["Chairs",632],["Envelopes",251],["Supplies",-165],["Bookcases",-837]],"shn":[622,224,196,70],"sha":[221,208,277,287],"ri":[1072,40],"t10":[["Yana Sorensen",1134],["Rick Wilson",1008],["Dan Reichenbach",926],["Jim Kriz",809],["George Zrebassa",726],["Alan Dominguez",726],["Helen Wasserman",686],["Greg Guthrie",625],["Jane Waco",606],["Robert Marley",604]],"yr":[["2023",0,0],["2024",0,0],["2025",0,0],["2026",258241,37542]],"qr":{"West_Q1":7094,"West_Q2":6273,"West_Q3":14100,"West_Q4":10075}},"2023:a:Consumer:a:a:a":{"ts":268700,"tp":24115,"am":8.97,"or":533,"cu":315,"lo":235,"mo":[["2023-01",6928,775,6928],["2023-02",3168,497,10096],["2023-03",11869,745,21965],["2023-04",9109,1155,31074],["2023-05",13910,915,44984],["2023-06",25924,2995,70908],["2023-07",20198,1163,91106],["2023-08",17205,2546,108310],["2023-09",59728,5370,168039],["2023-10",16247,2332,184285],["2023-11",46572,2328,230857],["2023-12",37843,3295,268700]],"cs":[87485,85606,95609],"cp":[1968,10525,11622],"rs":[67316,78971,32311,90102],"rp":[574,8831,3844,10866],"ss":[268700,0,0],"sc":[["Phones",6027],["Chairs",3629],["Paper",3068],["Accessories",3057],["Binders",2686],["Copiers",2316],["Storage",1493],["Furnishings",948],["Envelopes",828],["Appliances",777],["Art",719],["Labels",466],["Supplies",347],["Machines",222],["Fasteners",141],["Bookcases",-646],["Tables",-1963]],"shn":[659,222,147,61],"sha":[253,255,237,173],"ri":[918,171],"t10":[["Sanjit Chand",1129],["Mitch Webber",1113],["Tom Boeckenhauer",898],["Darrin Martin",798],["Lena Radford",605],["Jack Garza",603],["Greg Tran",582],["Gary Hwang",582],["Valerie Dominguez",577],["Joseph Holt",570]],"yr":[["2023",268700,24115],["2024",0,0],["2025",0,0],["2026",0,0]],"qr":{"Central_Q1":99,"East_Q1":431,"West_Q1":581,"South_Q1":905,"West_Q2":2158,"South_Q2":2233,"Central_Q2":-746,"East_Q2":1421,"East_Q3":4027,"South_Q3":447,"Central_Q3":-774,"West_Q3":5379,"Central_Q4":1996,"East_Q4":2952,"West_Q4":2748,"South_Q4":259}},"2023:a:Corporate:a:a:a":{"ts":130792,"tp":14047,"am":10.74,"or":297,"cu":183,"lo":106,"mo":[["2023-01",1983,390,1983],["2023-02",1184,307,3166],["2023-03",11107,370,14273],["2023-04",14132,1489,28405],["2023-05",9142,1357,37547],["2023-06",3971,102,41518],["2023-07",10033,1309,51551],["2023-08",7471,2255,59022],["2023-09",16363,-229,75385],["2023-10",13565,1181,88950],["2023-11",21193,3500,110143],["2023-12",20650,2016,130792]],"cs":[46255,49093,35444],"cp":[1267,8239,4542],"rs":[19902,39244,34685,36961],"rp":[-398,2591,6656,5199],"ss":[0,130792,0],"sc":[["Phones",3457],["Paper",2544],["Accessories",1660],["Storage",1486],["Chairs",1404],["Binders",1228],["Appliances",1127],["Furnishings",798],["Labels",664],["Art",523],["Envelopes",461],["Bookcases",234],["Copiers",135],["Supplies",132],["Fasteners",74],["Machines",-709],["Tables",-1170]],"shn":[391,122,103,18],"sha":[195,262,162,325],"ri":[553,81],"t10":[["Ruben Ausman",776],["Mitch Willingham",743],["Kristen Hastings",699],["Nick Crebassa",691],["Yoseph Carroll",612],["Mary Zewe",594],["Roland Schwarz",552],["Rick Reed",544],["Anthony Johnson",503],["Marina Lichtenstein",487]],"yr":[["2023",130792,14047],["2024",0,0],["2025",0,0],["2026",0,0]],"qr":{"South_Q1":1423,"East_Q1":-687,"West_Q1":257,"Central_Q1":74,"East_Q2":40,"South_Q2":1758,"West_Q2":864,"Central_Q2":286,"South_Q3":1522,"West_Q3":1061,"Central_Q3":-954,"East_Q3":1705,"West_Q4":3015,"Central_Q4":195,"South_Q4":1953,"East_Q4":1533}},"2023:a:Home Office:a:a:a":{"ts":94548,"tp":12320,"am":13.03,"or":165,"cu":107,"lo":43,"mo":[["2023-01",5608,1207,5608],["2023-02",168,58,5776],["2023-03",33958,1262,39734],["2023-04",5055,940,44789],["2023-05",3267,238,48056],["2023-06",4775,1435,52831],["2023-07",3716,77,56546],["2023-08",4242,915,60789],["2023-09",6579,964,67368],["2023-10",2602,323,69970],["2023-11",11062,2048,81032],["2023-12",13516,2853,94548]],"cs":[28385,19314,46849],"cp":[3297,4338,4685],"rs":[16620,17225,36850,23853],"rp":[2569,3593,2320,3838],"ss":[0,0,94548],"sc":[["Chairs",1821],["Phones",1546],["Accessories",1514],["Storage",1012],["Paper",976],["Appliances",951],["Machines",882],["Tables",852],["Binders",809],["Copiers",743],["Furnishings",550],["Envelopes",206],["Art",192],["Labels",155],["Bookcases",74],["Fasteners",19],["Supplies",17]],"shn":[228,44,43,13],"sha":[304,339,194,146],"ri":[294,34],"t10":[["Maria Etezadi",1167],["Dianna Wilson",1144],["Nathan Mautz",988],["Katherine Murray",783],["Sample Company A",765],["Ben Ferrer",698],["Penelope Sewall",623],["Frank Gastineau",611],["Matt Abelman",563],["Paul Prost",472]],"yr":[["2023",94548,12320],["2024",0,0],["2025",0,0],["2026",0,0]],"qr":{"Central_Q1":114,"South_Q1":1328,"West_Q1":1149,"East_Q1":-64,"West_Q2":706,"East_Q2":720,"South_Q2":-231,"Central_Q2":1419,"West_Q3":937,"Central_Q3":758,"East_Q3":184,"South_Q3":77,"West_Q4":1047,"South_Q4":1146,"East_Q4":2753,"Central_Q4":277}},"2024:a:Consumer:a:a:a":{"ts":267332,"tp":31665,"am":11.84,"or":541,"cu":295,"lo":223,"mo":[["2024-01",14275,-426,14275],["2024-02",9269,1574,23544],["2024-03",17419,2889,40963],["2024-04",22626,2756,63589],["2024-05",20994,2698,84584],["2024-06",12825,2426,97408],["2024-07",19949,1788,117357],["2024-08",20748,2828,138106],["2024-09",38885,5442,176990],["2024-10",17129,693,194119],["2024-11",33147,3922,227266],["2024-12",40067,5075,267332]],"cs":[94816,80127,92390],"cp":[2408,11499,17758],"rs":[49662,85354,49206,83110],"rp":[3035,11843,5271,11516],"ss":[267332,0,0],"sc":[["Phones",6538],["Accessories",6348],["Chairs",3722],["Paper",3197],["Binders",3093],["Copiers",2973],["Machines",1899],["Furnishings",1628],["Appliances",1475],["Storage",1301],["Envelopes",830],["Labels",807],["Art",723],["Fasteners",139],["Supplies",-65],["Bookcases",-1348],["Tables",-1594]],"shn":[704,219,136,80],"sha":[247,225,209,198],"ri":[976,163],"t10":[["Natalie Webber",1209],["Valerie Dominguez",959],["Sarah Brown",939],["Greg Tran",896],["Craig Carroll",895],["Naresj Patel",853],["John Lucas",817],["Giulietta Baptist",768],["Katrina Willman",754],["James Galang",737]],"yr":[["2023",0,0],["2024",267332,31665],["2025",0,0],["2026",0,0]],"qr":{"Central_Q1":43,"South_Q1":1061,"East_Q1":1095,"West_Q1":1838,"Central_Q2":646,"West_Q2":3024,"East_Q2":3189,"South_Q2":1020,"Central_Q3":1110,"South_Q3":3323,"East_Q3":3561,"West_Q3":2064,"Central_Q4":1236,"West_Q4":4589,"East_Q4":3998,"South_Q4":-133}},"2024:a:Corporate:a:a:a":{"ts":129108,"tp":17272,"am":13.38,"or":317,"cu":167,"lo":119,"mo":[["2024-01",3670,-134,3670],["2024-02",2565,508,6236],["2024-03",16332,2935,22568],["2024-04",4121,563,26689],["2024-05",5455,678,32144],["2024-06",9404,583,41548],["2024-07",7192,907,48739],["2024-08",11456,1339,60195],["2024-09",16611,2820,76806],["2024-10",8646,1386,85453],["2024-11",27300,3765,112752],["2024-12",16356,1922,129108]],"cs":[46066,34937,48105],"cp":[2706,7293,7273],"rs":[29080,45068,18107,36853],"rp":[3953,4869,2616,5834],"ss":[0,129108,0],"sc":[["Phones",2724],["Copiers",2589],["Paper",2111],["Storage",1832],["Accessories",1653],["Furnishings",1211],["Appliances",1050],["Envelopes",829],["Chairs",821],["Binders",521],["Art",481],["Tables",450],["Labels",409],["Machines",306],["Bookcases",225],["Supplies",34],["Fasteners",27]],"shn":[402,119,107,17],"sha":[192,128,246,604],"ri":[556,89],"t10":[["Fred Hopkins",1229],["Keith Dawkins",1151],["Todd Sumrall",830],["Dave Hallsten",783],["Harry Marie",718],["Quincy Jones",571],["Ellis Ballard",570],["Ken Heidel",502],["Suzanne McNair",468],["Kalyca Meade",450]],"yr":[["2023",0,0],["2024",129108,17272],["2025",0,0],["2026",0,0]],"qr":{"East_Q1":354,"Central_Q1":448,"South_Q1":308,"West_Q1":2199,"Central_Q2":181,"West_Q2":757,"South_Q2":932,"East_Q2":-45,"South_Q3":747,"East_Q3":2159,"Central_Q3":788,"West_Q3":1373,"West_Q4":1506,"East_Q4":2401,"South_Q4":629,"Central_Q4":2537}},"2024:a:Home Office:a:a:a":{"ts":76552,"tp":10977,"am":14.34,"or":195,"cu":115,"lo":58,"mo":[["2024-01",517,-255,517],["2024-02",117,31,634],["2024-03",6228,706,6861],["2024-04",7448,523,14309],["2024-05",3798,656,18107],["2024-06",2569,112,20676],["2024-07",1625,402,22300],["2024-08",4853,53,27153],["2024-09",9131,1912,36284],["2024-10",5632,874,41916],["2024-11",15526,2832,57442],["2024-12",19110,3132,76552]],"cs":[31448,22606,22498],"cp":[1754,4410,4813],"rs":[24132,26650,4046,21724],"rp":[2840,4469,698,2969],"ss":[0,0,76552],"sc":[["Accessories",1934],["Chairs",1637],["Paper",1272],["Phones",1196],["Binders",1075],["Copiers",975],["Appliances",934],["Machines",707],["Storage",400],["Furnishings",355],["Envelopes",317],["Art",282],["Labels",107],["Fasteners",17],["Supplies",6],["Bookcases",-57],["Tables",-180]],"shn":[201,87,46,12],"sha":[171,300,318,127],"ri":[302,44],"t10":[["Philisse Overcash",823],["Robert Marley",661],["Matt Abelman",619],["Shirley Daniels",618],["Tamara Willingham",610],["Dean percer",601],["Emily Ducich",575],["Mike Pelletier",528],["Nicole Fjeld",453],["Nora Pelletier",449]],"yr":[["2023",0,0],["2024",76552,10977],["2025",0,0],["2026",0,0]],"qr":{"West_Q1":484,"Central_Q1":-428,"South_Q1":133,"East_Q1":292,"East_Q2":191,"West_Q2":227,"Central_Q2":537,"South_Q2":337,"East_Q3":1243,"West_Q3":277,"Central_Q3":697,"South_Q3":149,"East_Q4":2744,"South_Q4":79,"West_Q4":1981,"Central_Q4":2034}},"2025:a:Consumer:a:a:a":{"ts":299715,"tp":34792,"am":11.61,"or":664,"cu":335,"lo":233,"mo":[["2025-01",6027,122,6027],["2025-02",15800,1653,21827],["2025-03",24917,1013,46744],["2025-04",14154,1186,60899],["2025-05",32230,2942,93128],["2025-06",24430,3351,117558],["2025-07",23670,3039,141228],["2025-08",14487,1523,155715],["2025-09",42685,6351,198401],["2025-10",10280,1211,208681],["2025-11",41450,4387,250131],["2025-12",49584,8015,299715]],"cs":[100870,88612,110234],"cp":[4860,15117,14815],"rs":[67882,95419,53104,83310],"rp":[3290,10389,8263,12850],"ss":[299715,0,0],"sc":[["Accessories",5149],["Paper",4114],["Phones",4067],["Binders",3494],["Furnishings",3446],["Copiers",3264],["Chairs",2756],["Storage",2741],["Appliances",2590],["Machines",2335],["Envelopes",968],["Art",852],["Labels",591],["Fasteners",161],["Bookcases",-240],["Supplies",-394],["Tables",-1102]],"shn":[805,247,221,85],"sha":[232,240,156,232],"ri":[1180,178],"t10":[["Joe Elijah",1279],["Christopher Conant",1158],["Toby Gnade",845],["Caroline Jumper",793],["Max Jones",729],["Neoma Murray",723],["Clay Ludtke",714],["Alejandro Grove",713],["Jill Fjeld",667],["Gary Zandusky",652]],"yr":[["2023",0,0],["2024",0,0],["2025",299715,34792],["2026",0,0]],"qr":{"West_Q1":281,"Central_Q1":-433,"South_Q1":1201,"East_Q1":1739,"East_Q2":4178,"Central_Q2":-376,"South_Q2":1563,"West_Q2":2115,"South_Q3":3285,"West_Q3":4368,"Central_Q3":1667,"East_Q3":1592,"West_Q4":6086,"Central_Q4":2433,"East_Q4":2879,"South_Q4":2214}},"2025:a:Corporate:a:a:a":{"ts":207661,"tp":20657,"am":9.95,"or":430,"cu":199,"lo":162,"mo":[["2025-01",9773,1957,9773],["2025-02",2867,92,12640],["2025-03",14226,4,26866],["2025-04",16177,1471,43044],["2025-05",18452,3031,61496],["2025-06",7826,705,69322],["2025-07",13169,1398,82491],["2025-08",12943,992,95434],["2025-09",17877,1434,113311],["2025-10",32131,1974,145442],["2025-11",26493,3890,171935],["2025-12",35726,3710,207661]],"cs":[77530,54309,75823],"cp":[3238,8786,8632],"rs":[60714,53786,26695,66466],"rp":[4884,5918,3001,6855],"ss":[0,207661,0],"sc":[["Accessories",3391],["Phones",2993],["Chairs",2355],["Paper",2246],["Binders",1943],["Copiers",1795],["Storage",1742],["Appliances",1204],["Envelopes",714],["Furnishings",705],["Machines",453],["Art",397],["Labels",361],["Bookcases",235],["Supplies",93],["Fasteners",88],["Tables",-57]],"shn":[497,172,101,35],"sha":[266,248,246,229],"ri":[685,120],"t10":[["Laura Armstrong",1430],["Anna H\u00e4berlin",1061],["Jonathan Doherty",1055],["Grace Kelly",1042],["Tamara Chand",935],["Justin Ellison",760],["Edward Hooks",759],["Mark Cousins",721],["Sung Pak",619],["Bill Shonely",609]],"yr":[["2023",0,0],["2024",0,0],["2025",207661,20657],["2026",0,0]],"qr":{"East_Q1":250,"Central_Q1":491,"South_Q1":281,"West_Q1":1031,"West_Q2":1848,"East_Q2":1366,"Central_Q2":934,"South_Q2":1059,"Central_Q3":94,"West_Q3":2380,"East_Q3":1271,"South_Q3":79,"East_Q4":3031,"Central_Q4":3365,"South_Q4":1582,"West_Q4":1596}},"2025:a:Home Office:a:a:a":{"ts":106557,"tp":12706,"am":11.92,"or":246,"cu":116,"lo":90,"mo":[["2025-01",3031,998,3031],["2025-02",4312,1029,7342],["2025-03",13887,1665,21230],["2025-04",8497,580,29727],["2025-05",6361,1350,36088],["2025-06",8681,915,44769],["2025-07",3461,423,48230],["2025-08",4286,-169,52517],["2025-09",12959,988,65476],["2025-10",17420,2744,82897],["2025-11",11469,1111,94366],["2025-12",12192,1072,106557]],"cs":[22580,43453,40523],"cp":[-48,8238,4517],"rs":[20008,33545,13811,39193],"rp":[2102,3791,2865,3949],"ss":[0,0,106557],"sc":[["Paper",2729],["Phones",2501],["Storage",1732],["Binders",1584],["Appliances",1235],["Copiers",1020],["Accessories",885],["Chairs",692],["Envelopes",393],["Art",214],["Labels",210],["Bookcases",137],["Machines",111],["Supplies",76],["Fasteners",65],["Furnishings",50],["Tables",-927]],"shn":[284,81,68,38],"sha":[199,249,341,178],"ri":[399,72],"t10":[["Rick Huthwaite",1153],["Eugene Moren",969],["Deborah Brumfield",798],["Frank Carlisle",791],["Adam Bellavance",723],["Paul Prost",707],["Ben Ferrer",632],["Dennis Pardue",620],["Corinna Mitchell",577],["Maria Etezadi",452]],"yr":[["2023",0,0],["2024",0,0],["2025",106557,12706],["2026",0,0]],"qr":{"West_Q1":1125,"East_Q1":321,"South_Q1":1879,"Central_Q1":368,"South_Q2":677,"Central_Q2":1118,"East_Q2":380,"West_Q2":670,"West_Q3":961,"East_Q3":941,"Central_Q3":-707,"South_Q3":46,"West_Q4":1193,"East_Q4":2149,"Central_Q4":1322,"South_Q4":263}},"2026:a:Consumer:a:a:a":{"ts":334912,"tp":37354,"am":11.15,"or":890,"cu":364,"lo":327,"mo":[["2026-01",23212,2439,23212],["2026-02",5589,233,28801],["2026-03",35655,3607,64456],["2026-04",9292,1325,73748],["2026-05",21060,2760,94808],["2026-06",20273,2370,115081],["2026-07",19716,1923,134797],["2026-08",32619,3980,167416],["2026-09",43895,6163,211311],["2026-10",23225,2232,234535],["2026-11",49790,3979,284325],["2026-12",50586,6342,334912]],"cs":[111554,115191,108167],"cp":[3411,19055,14888],"rs":[69101,97399,60960,107452],"rp":[3533,10240,8286,15295],"ss":[334912,0,0],"sc":[["Phones",6153],["Accessories",5733],["Paper",5542],["Binders",4929],["Appliances",3930],["Chairs",3615],["Copiers",2737],["Furnishings",2209],["Storage",1600],["Art",1263],["Labels",1238],["Envelopes",662],["Machines",265],["Fasteners",226],["Bookcases",-322],["Supplies",-334],["Tables",-2092]],"shn":[977,354,273,91],"sha":[194,194,226,160],"ri":[1461,234],"t10":[["Seth Vernon",1531],["John Lee",843],["Alan Hwang",759],["Theone Pippenger",754],["Pete Kriz",734],["Robert Waldorf",710],["Andy Reiter",674],["Doug Jacobs",670],["Raymond Buch",631],["Shahid Collister",611]],"yr":[["2023",0,0],["2024",0,0],["2025",0,0],["2026",334912,37354]],"qr":{"Central_Q1":1036,"West_Q1":3126,"East_Q1":1272,"South_Q1":845,"West_Q2":3013,"Central_Q2":586,"East_Q2":1274,"South_Q2":1583,"West_Q3":5245,"South_Q3":2584,"East_Q3":3347,"Central_Q3":890,"West_Q4":3910,"Central_Q4":1022,"East_Q4":4347,"South_Q4":3274}},"2026:a:Corporate:a:a:a":{"ts":248244,"tp":31573,"am":12.72,"or":508,"cu":207,"lo":175,"mo":[["2026-01",12509,857,12509],["2026-02",7959,1638,20468],["2026-03",16575,3042,37043],["2026-04",14803,1356,51846],["2026-05",14259,1899,66105],["2026-06",19695,3233,85800],["2026-07",16526,2938,102326],["2026-08",25698,4215,128024],["2026-09",24265,3314,152289],["2026-10",30525,2102,182814],["2026-11",44651,4910,227465],["2026-12",20779,2068,248244]],"cs":[61416,97974,88853],"cp":[2345,17243,11985],"rs":[48300,65478,42399,92067],"rp":[4283,8669,4247,14374],"ss":[0,248244,0],"sc":[["Accessories",5831],["Binders",3988],["Storage",3953],["Appliances",3578],["Chairs",3560],["Paper",3483],["Phones",2840],["Copiers",2223],["Furnishings",1237],["Machines",1091],["Fasteners",640],["Art",627],["Envelopes",568],["Labels",326],["Supplies",80],["Bookcases",-338],["Tables",-2114]],"shn":[584,198,176,48],"sha":[226,285,217,456],"ri":[872,134],"t10":[["Brian Moss",1938],["Helen Wasserman",1723],["Rick Wilson",1576],["Yana Sorensen",1151],["Dan Reichenbach",1087],["Justin Deggeller",1061],["Jim Epp",834],["Thomas Boland",830],["Karen Bern",764],["George Zrebassa",736]],"yr":[["2023",0,0],["2024",0,0],["2025",0,0],["2026",248244,31573]],"qr":{"South_Q1":1394,"West_Q1":1742,"Central_Q1":1333,"East_Q1":1068,"West_Q2":2157,"South_Q2":1221,"Central_Q2":2081,"East_Q2":1029,"South_Q3":748,"Central_Q3":849,"East_Q3":2110,"West_Q3":6761,"West_Q4":3714,"Central_Q4":20,"South_Q4":884,"East_Q4":4462}},"2026:a:Home Office:a:a:a":{"ts":162411,"tp":20207,"am":12.44,"or":325,"cu":129,"lo":130,"mo":[["2026-01",8538,1604,8538],["2026-02",6753,-38,15291],["2026-03",8499,1353,23790],["2026-04",12684,618,36474],["2026-05",9836,1320,46310],["2026-06",13088,1329,59398],["2026-07",9747,1852,69146],["2026-08",5813,1223,74959],["2026-09",19904,2584,94863],["2026-10",29725,2239,124588],["2026-11",24014,3169,148602],["2026-12",13810,2955,162411]],"cs":[46343,40670,75399],"cp":[953,7830,11424],"rs":[30452,53691,19547,58721],"rp":[4064,6570,1700,7873],"ss":[0,0,162411],"sc":[["Phones",3653],["Accessories",3555],["Paper",3229],["Copiers",3182],["Storage",1785],["Binders",1390],["Machines",1033],["Furnishings",1017],["Chairs",892],["Appliances",496],["Art",381],["Labels",238],["Envelopes",212],["Bookcases",171],["Fasteners",51],["Supplies",48],["Tables",-1127]],"shn":[388,114,127,49],"sha":[217,224,317,254],"ri":[583,95],"t10":[["Bill Eplett",1181],["Tom Ashbrook",1171],["Karen Ferguson",1155],["Alan Dominguez",1057],["Tonja Turnell",841],["Jim Kriz",809],["Corinna Mitchell",659],["Laurel Beltran",628],["Stephanie Ulpright",623],["Robert Marley",604]],"yr":[["2023",0,0],["2024",0,0],["2025",0,0],["2026",162411,20207]],"qr":{"Central_Q1":566,"South_Q1":272,"East_Q1":-145,"West_Q1":2226,"South_Q2":220,"East_Q2":1728,"Central_Q2":217,"West_Q2":1103,"Central_Q3":1681,"East_Q3":1234,"West_Q3":2094,"South_Q3":649,"West_Q4":2451,"East_Q4":3752,"South_Q4":559,"Central_Q4":1600}},"2023:a:a:Furniture:a:a":{"ts":162125,"tp":6532,"am":4.03,"or":368,"cu":297,"lo":150,"mo":[["2023-01",6308,665,6308],["2023-02",1840,121,8147],["2023-03",15817,-557,23964],["2023-04",7945,554,31909],["2023-05",8505,-238,40414],["2023-06",13206,621,53620],["2023-07",10821,374,64441],["2023-08",7320,663,71761],["2023-09",23816,1954,95578],["2023-10",13136,656,108714],["2023-11",21763,-227,130477],["2023-12",31648,1946,162125]],"cs":[162125,0,0],"cp":[6532,0,0],"rs":[32910,49563,26968,52684],"rp":[-1124,640,3824,3192],"ss":[87485,46255,28385],"sc":[["Chairs",6855],["Furnishings",2296],["Bookcases",-338],["Tables",-2280]],"shn":[269,93,69,14],"sha":[339,460,335,356],"ri":[326,119],"t10":[["Penelope Sewall",594],["Resi P\u00f6lking",584],["Maria Etezadi",570],["Dianna Wilson",570],["Anne McFarland",433],["Luke Weiss",421],["Paul Prost",416],["Carol Triggs",379],["Laura Armstrong",336],["Ruben Ausman",316]],"yr":[["2023",162125,6532],["2024",0,0],["2025",0,0],["2026",0,0]],"qr":{"South_Q1":1444,"Central_Q1":-220,"East_Q1":-1017,"West_Q1":22,"South_Q2":773,"Central_Q2":-330,"West_Q2":830,"East_Q2":-336,"South_Q3":662,"West_Q3":1221,"East_Q3":1481,"Central_Q3":-372,"West_Q4":1119,"Central_Q4":-201,"East_Q4":511,"South_Q4":945}},"2023:a:a:Office Supplies:a:a":{"ts":154014,"tp":23102,"am":15.0,"or":764,"cu":518,"lo":181,"mo":[["2023-01",4858,792,4858],["2023-02",1072,176,5929],["2023-03",8606,1418,14535],["2023-04",11155,1096,25690],["2023-05",7872,1368,33562],["2023-06",13027,2563,46590],["2023-07",15121,908,61711],["2023-08",12388,3165,74099],["2023-09",27487,2779,101586],["2023-10",7298,1143,108884],["2023-11",26862,5009,135747],["2023-12",18267,2684,154014]],"cs":[0,154014,0],"cp":[0,23102,0],"rs":[37002,38159,25959,52894],"rp":[1655,7347,4336,9764],"ss":[85606,49093,19314],"sc":[["Paper",6588],["Binders",4723],["Storage",3990],["Appliances",2855],["Envelopes",1495],["Art",1434],["Labels",1286],["Supplies",497],["Fasteners",233]],"shn":[784,232,168,60],"sha":[124,152,100,80],"ri":[1113,131],"t10":[["Sanjit Chand",1191],["Anthony Jacobs",656],["Greg Tran",632],["Frank Gastineau",611],["Yoseph Carroll",597],["Mary Zewe",579],["Gary Hwang",579],["Dianna Wilson",574],["Mitch Willingham",570],["Joseph Holt",570]],"yr":[["2023",154014,23102],["2024",0,0],["2025",0,0],["2026",0,0]],"qr":{"Central_Q1":10,"East_Q1":404,"South_Q1":603,"West_Q1":1368,"West_Q2":1349,"East_Q2":1485,"South_Q2":1284,"Central_Q2":909,"South_Q3":1150,"West_Q3":3800,"East_Q3":2157,"Central_Q3":-254,"West_Q4":3246,"South_Q4":1299,"East_Q4":3301,"Central_Q4":990}},"2023:a:a:Technology:a:a":{"ts":177901,"tp":20849,"am":11.72,"or":297,"cu":252,"lo":53,"mo":[["2023-01",3353,914,3353],["2023-02",1609,566,4961],["2023-03",32511,1516,37472],["2023-04",9195,1934,46668],["2023-05",9943,1380,56611],["2023-06",8436,1349,65047],["2023-07",8004,1266,73051],["2023-08",9210,1887,82261],["2023-09",31367,1372,113628],["2023-10",11979,2038,125607],["2023-11",30201,3094,155808],["2023-12",22093,3533,177901]],"cs":[0,0,177901],"cp":[0,0,20849],"rs":[33927,47718,50919,45338],"rp":[2213,7029,4659,6947],"ss":[95609,35444,46849],"sc":[["Phones",11030],["Accessories",6230],["Copiers",3194],["Machines",395]],"shn":[225,63,56,18],"sha":[551,404,356,473],"ri":[326,36],"t10":[["Nathan Mautz",920],["Mitch Webber",882],["Darrin Martin",655],["Jack Garza",603],["Tom Boeckenhauer",598],["Ben Ferrer",578],["Kristen Hastings",570],["Hunter Glantz",570],["John Murray",570],["Katherine Murray",570]],"yr":[["2023",177901,20849],["2024",0,0],["2025",0,0],["2026",0,0]],"qr":{"South_Q1":1609,"Central_Q1":497,"East_Q1":293,"West_Q1":597,"South_Q2":1702,"West_Q2":1549,"East_Q2":1032,"Central_Q2":380,"South_Q3":235,"East_Q3":2278,"Central_Q3":-343,"West_Q3":2355,"West_Q4":2445,"East_Q4":3426,"South_Q4":1113,"Central_Q4":1680}},"2024:a:a:Furniture:a:a":{"ts":172330,"tp":6868,"am":3.99,"or":377,"cu":292,"lo":148,"mo":[["2024-01",11805,-1250,11805],["2024-02",3134,395,14939],["2024-03",13743,1609,28682],["2024-04",10476,339,39158],["2024-05",9419,720,48577],["2024-06",7714,-135,56291],["2024-07",13674,-325,69965],["2024-08",9639,-487,79604],["2024-09",26273,2703,105877],["2024-10",12027,-496,117904],["2024-11",30881,2717,148784],["2024-12",23546,1079,172330]],"cs":[172330,0,0],"cp":[6868,0,0],"rs":[35592,54025,24104,58610],"rp":[-54,1311,1830,3782],"ss":[94816,46066,31448],"sc":[["Chairs",6180],["Furnishings",3194],["Bookcases",-1181],["Tables",-1324]],"shn":[293,84,56,29],"sha":[360,388,431,346],"ri":[351,111],"t10":[["Natalie Webber",600],["Ellis Ballard",570],["Bill Donatelli",570],["Quincy Jones",570],["Emily Ducich",553],["Tamara Willingham",539],["Giulietta Baptist",427],["Nicole Fjeld",412],["Deanra Eno",394],["Anna Andreadi",384]],"yr":[["2023",0,0],["2024",172330,6868],["2025",0,0],["2026",0,0]],"qr":{"East_Q1":-196,"Central_Q1":-569,"South_Q1":-91,"West_Q1":1610,"East_Q2":-55,"West_Q2":709,"South_Q2":546,"Central_Q2":-276,"Central_Q3":474,"South_Q3":1272,"East_Q3":-188,"West_Q3":332,"West_Q4":1131,"East_Q4":1749,"South_Q4":103,"Central_Q4":317}},"2024:a:a:Office Supplies:a:a":{"ts":137670,"tp":23203,"am":16.85,"or":789,"cu":505,"lo":197,"mo":[["2024-01",1822,595,1822],["2024-02",5368,1113,7190],["2024-03",15892,2963,23082],["2024-04",12559,1210,35641],["2024-05",9185,1721,44826],["2024-06",10648,1703,55473],["2024-07",4720,1114,60193],["2024-08",11894,2225,72087],["2024-09",19337,2650,91424],["2024-10",8673,1117,100097],["2024-11",21218,3354,121316],["2024-12",16355,3439,137670]],"cs":[0,137670,0],"cp":[0,23203,0],"rs":[25461,42978,31253,37978],"rp":[1753,9639,3102,8709],"ss":[80127,34937,22606],"sc":[["Paper",6580],["Binders",4689],["Storage",3533],["Appliances",3459],["Envelopes",1977],["Art",1486],["Labels",1323],["Fasteners",182],["Supplies",-25]],"shn":[780,245,170,62],"sha":[112,99,130,61],"ri":[1105,152],"t10":[["Pierre Wener",623],["Shirley Daniels",618],["Christopher Martinez",590],["Annie Thurman",575],["Naresj Patel",567],["Lena Creighton",562],["Shaun Weien",553],["Philisse Overcash",501],["Robert Marley",470],["Suzanne McNair",468]],"yr":[["2023",0,0],["2024",137670,23203],["2025",0,0],["2026",0,0]],"qr":{"East_Q1":2123,"Central_Q1":-230,"West_Q1":1305,"South_Q1":1473,"Central_Q2":268,"East_Q2":2245,"West_Q2":1501,"South_Q2":619,"Central_Q3":84,"South_Q3":744,"East_Q3":3011,"West_Q3":2150,"East_Q4":2259,"Central_Q4":1630,"West_Q4":3754,"South_Q4":266}},"2024:a:a:Technology:a:a":{"ts":162992,"tp":29843,"am":18.31,"or":340,"cu":276,"lo":55,"mo":[["2024-01",4835,-160,4835],["2024-02",3449,605,8284],["2024-03",10344,1959,18628],["2024-04",11161,2293,29789],["2024-05",11643,1591,41432],["2024-06",6435,1553,47867],["2024-07",10371,2308,58238],["2024-08",15525,2483,73763],["2024-09",19017,4821,92780],["2024-10",10707,2333,103487],["2024-11",23874,4447,127360],["2024-12",35632,5611,162992]],"cs":[0,0,162992],"cp":[0,0,29843],"rs":[41821,60069,16003,45100],"rp":[8130,10232,3653,7829],"ss":[92390,48105,22498],"sc":[["Phones",10458],["Accessories",9936],["Copiers",6537],["Machines",2912]],"shn":[234,96,63,18],"sha":[395,352,366,766],"ri":[378,33],"t10":[["Sarah Brown",874],["Valerie Dominguez",807],["Todd Sumrall",763],["Katrina Willman",759],["Keith Dawkins",713],["James Galang",711],["Harry Marie",578],["Fred Hopkins",570],["Greg Tran",570],["Natalie Webber",570]],"yr":[["2023",0,0],["2024",162992,29843],["2025",0,0],["2026",0,0]],"qr":{"East_Q1":-186,"Central_Q1":862,"West_Q1":1607,"South_Q1":121,"Central_Q2":1370,"West_Q2":1798,"East_Q2":1144,"South_Q2":1124,"South_Q3":2203,"Central_Q3":2037,"East_Q3":4139,"West_Q3":1233,"Central_Q4":3860,"West_Q4":3191,"East_Q4":5134,"South_Q4":206}},"2025:a:a:Furniture:a:a":{"ts":200980,"tp":8050,"am":4.01,"or":490,"cu":364,"lo":193,"mo":[["2025-01",7688,558,7688],["2025-02",3926,377,11613],["2025-03",14116,-459,25730],["2025-04",13291,881,39021],["2025-05",15160,1711,54181],["2025-06",13231,0,67412],["2025-07",13116,1109,80528],["2025-08",12483,-467,93011],["2025-09",27327,728,120338],["2025-10",11889,6,132226],["2025-11",31784,820,164010],["2025-12",36970,2787,200980]],"cs":[200980,0,0],"cp":[8050,0,0],"rs":[50837,46991,27921,75231],"rp":[-57,1459,3146,3502],"ss":[100870,77530,22580],"sc":[["Chairs",5802],["Furnishings",4202],["Bookcases",133],["Tables",-2086]],"shn":[353,117,75,36],"sha":[365,306,317,352],"ri":[427,154],"t10":[["Joe Elijah",864],["Laura Armstrong",688],["Justin Ellison",570],["Maribeth Schnelling",458],["Michael Moore",427],["Jack O'Briant",407],["Meg Tillman",389],["Alejandro Grove",388],["Denny Joy",378],["Mark Hamilton",376]],"yr":[["2023",0,0],["2024",0,0],["2025",200980,8050],["2026",0,0]],"qr":{"East_Q1":-58,"Central_Q1":-175,"West_Q1":400,"South_Q1":309,"East_Q2":571,"South_Q2":955,"Central_Q2":94,"West_Q2":973,"Central_Q3":-1045,"West_Q3":1382,"East_Q3":20,"South_Q3":1013,"West_Q4":748,"Central_Q4":1069,"East_Q4":926,"South_Q4":869}},"2025:a:a:Office Supplies:a:a":{"ts":186374,"tp":32141,"am":17.25,"or":963,"cu":553,"lo":218,"mo":[["2025-01",5313,1544,5313],["2025-02",6794,1330,12107],["2025-03",17347,1535,29454],["2025-04",10647,438,40102],["2025-05",13050,2394,53152],["2025-06",11334,2582,64486],["2025-07",13915,1848,78401],["2025-08",9561,1885,87963],["2025-09",23311,3757,111274],["2025-10",16403,3438,127677],["2025-11",20487,4687,148164],["2025-12",38210,6702,186374]],"cs":[0,186374,0],"cp":[0,32141,0],"rs":[46905,63052,28667,47750],"rp":[4402,11803,5135,10802],"ss":[88612,54309,43453],"sc":[["Paper",9089],["Binders",7021],["Storage",6215],["Appliances",5028],["Envelopes",2074],["Art",1463],["Labels",1161],["Fasteners",314],["Supplies",-225]],"shn":[960,292,246,94],"sha":[113,143,111,98],"ri":[1422,170],"t10":[["Jonathan Doherty",993],["Adam Bellavance",679],["Grace Kelly",674],["Ben Ferrer",629],["Dennis Pardue",620],["Edward Hooks",607],["Adrian Barton",576],["Deborah Brumfield",573],["Frank Carlisle",570],["Clay Ludtke",556]],"yr":[["2023",0,0],["2024",0,0],["2025",186374,32141],["2026",0,0]],"qr":{"Central_Q1":8,"West_Q1":834,"East_Q1":1663,"South_Q1":1904,"West_Q2":1543,"East_Q2":2337,"Central_Q2":564,"South_Q2":971,"West_Q3":2356,"South_Q3":1093,"East_Q3":3386,"Central_Q3":654,"South_Q4":1167,"Central_Q4":3175,"East_Q4":4417,"West_Q4":6068}},"2025:a:a:Technology:a:a":{"ts":226580,"tp":27965,"am":12.34,"or":391,"cu":292,"lo":74,"mo":[["2025-01",5830,975,5830],["2025-02",12259,1068,18088],["2025-03",21568,1607,39656],["2025-04",14891,1918,54547],["2025-05",28833,3217,83380],["2025-06",16372,2389,99752],["2025-07",13269,1902,113021],["2025-08",9672,927,122693],["2025-09",22883,4289,145577],["2025-10",31540,2485,177116],["2025-11",27141,3881,204257],["2025-12",22323,3308,226580]],"cs":[0,0,226580],"cp":[0,0,27965],"rs":[50863,72707,37022,65988],"rp":[5931,6836,5848,9351],"ss":[110234,75823,40523],"sc":[["Phones",9561],["Accessories",9425],["Copiers",6079],["Machines",2899]],"shn":[273,91,69,28],"sha":[506,487,455,452],"ri":[415,46],"t10":[["Christopher Conant",1116],["Sanjit Engle",703],["Neoma Murray",658],["Anna H\u00e4berlin",617],["Jill Fjeld",600],["Caroline Jumper",592],["Bill Shonely",571],["Karen Daniels",570],["Ionia McGrath",570],["Kelly Collister",570]],"yr":[["2023",0,0],["2024",0,0],["2025",226580,27965],["2026",0,0]],"qr":{"East_Q1":705,"Central_Q1":593,"South_Q1":1148,"West_Q1":1204,"Central_Q2":1017,"East_Q2":3016,"South_Q2":1373,"West_Q2":2117,"East_Q3":398,"West_Q3":3971,"South_Q3":1304,"Central_Q3":1445,"Central_Q4":2876,"East_Q4":2716,"South_Q4":2023,"West_Q4":2059}},"2026:a:a:Furniture:a:a":{"ts":219313,"tp":6709,"am":3.06,"or":584,"cu":411,"lo":241,"mo":[["2026-01",6029,-12,6029],["2026-02",6866,-199,12896],["2026-03",12369,1159,25265],["2026-04",9323,227,34588],["2026-05",17483,24,52071],["2026-06",19009,905,71079],["2026-07",12476,573,83555],["2026-08",15442,641,98997],["2026-09",29097,1772,128094],["2026-10",22246,-954,150339],["2026-11",37057,1170,187396],["2026-12",31917,1404,219313]],"cs":[219313,0,0],"cp":[6709,0,0],"rs":[45199,61653,38305,74155],"rp":[-688,2840,1358,3199],"ss":[111554,61416,46343],"sc":[["Chairs",8067],["Furnishings",4464],["Bookcases",-489],["Tables",-5332]],"shn":[399,145,129,40],"sha":[295,347,308,286],"ri":[542,171],"t10":[["Seth Vernon",900],["Rick Wilson",636],["Clay Ludtke",524],["Katherine Hughes",487],["Justin Deggeller",483],["Theone Pippenger",483],["Helen Wasserman",429],["Brenda Bowman",417],["Michelle Huthwaite",360],["Dan Reichenbach",302]],"yr":[["2023",0,0],["2024",0,0],["2025",0,0],["2026",219313,6709]],"qr":{"Central_Q1":58,"West_Q1":764,"East_Q1":22,"South_Q1":103,"West_Q2":397,"South_Q2":55,"East_Q2":165,"Central_Q2":539,"West_Q3":1539,"South_Q3":753,"East_Q3":1284,"Central_Q3":-591,"West_Q4":499,"South_Q4":447,"Central_Q4":-694,"East_Q4":1369}},"2026:a:a:Office Supplies:a:a":{"ts":253835,"tp":44128,"am":17.38,"or":1296,"cu":641,"lo":302,"mo":[["2026-01",21287,2048,21287],["2026-02",7408,1174,28695],["2026-03",14931,2828,43626],["2026-04",15072,2624,58698],["2026-05",13763,3166,72461],["2026-06",16986,3187,89447],["2026-07",10304,2543,99751],["2026-08",31069,6126,130820],["2026-09",31946,5851,162766],["2026-10",28334,3988,191100],["2026-11",31479,5531,222579],["2026-12",31256,5063,253835]],"cs":[0,253835,0],"cp":[0,44128,0],"rs":[58849,67470,39772,87744],"rp":[4364,12454,6818,20491],"ss":[115191,97974,40670],"sc":[["Paper",12254],["Binders",10307],["Appliances",8004],["Storage",7337],["Art",2271],["Labels",1803],["Envelopes",1442],["Fasteners",917],["Supplies",-207]],"shn":[1186,405,334,110],"sha":[122,152,106,103],"ri":[1799,236],"t10":[["Brian Moss",1337],["Yana Sorensen",1167],["Rick Wilson",931],["Karen Ferguson",873],["Alan Hwang",740],["Denise Monton",664],["Pete Kriz",642],["Amy Cox",603],["Andy Reiter",601],["Greg Guthrie",599]],"yr":[["2023",0,0],["2024",0,0],["2025",0,0],["2026",253835,44128]],"qr":{"Central_Q1":587,"South_Q1":888,"West_Q1":3159,"East_Q1":1415,"South_Q2":1854,"West_Q2":3075,"Central_Q2":1478,"East_Q2":2570,"Central_Q3":1519,"South_Q3":2154,"East_Q3":3055,"West_Q3":7791,"West_Q4":6466,"Central_Q4":780,"South_Q4":1921,"East_Q4":5414}},"2026:a:a:Technology:a:a":{"ts":272419,"tp":38297,"am":14.06,"or":532,"cu":387,"lo":89,"mo":[["2026-01",16943,2864,16943],["2026-02",6027,859,22970],["2026-03",33429,4015,56398],["2026-04",12383,448,68782],["2026-05",13910,2788,82691],["2026-06",17061,2841,99752],["2026-07",23210,3598,122962],["2026-08",17619,2651,140582],["2026-09",27022,4438,167603],["2026-10",32895,3539,200498],["2026-11",49919,5357,250417],["2026-12",22002,4899,272419]],"cs":[0,0,272419],"cp":[0,0,38297],"rs":[43805,87444,44828,96342],"rp":[8203,10185,6057,13853],"ss":[108167,88853,75399],"sc":[["Accessories",15119],["Phones",12647],["Copiers",8142],["Machines",2390]],"shn":[364,116,113,38],"sha":[392,333,575,686],"ri":[575,56],"t10":[["Tom Ashbrook",1141],["Bill Eplett",961],["Jim Kriz",809],["Helen Wasserman",709],["Harold Ryan",706],["Alan Dominguez",641],["Todd Sumrall",614],["Raymond Buch",606],["Jim Epp",605],["Stephanie Ulpright",596]],"yr":[["2023",0,0],["2024",0,0],["2025",0,0],["2026",272419,38297]],"qr":{"West_Q1":3171,"South_Q1":1519,"Central_Q1":2289,"East_Q1":760,"West_Q2":2801,"South_Q2":1114,"East_Q2":1296,"Central_Q2":867,"West_Q3":4770,"South_Q3":1074,"East_Q3":2352,"Central_Q3":2491,"West_Q4":3111,"East_Q4":5778,"South_Q4":2350,"Central_Q4":2556}}};
+
+const YEARS=['2023','2024','2025','2026'];
+const REGIONS=['Central','East','South','West'];
+const SEGS=['Consumer','Corporate','Home Office'];
+const CATS=['Furniture','Office Supplies','Technology'];
+const SHIPS=['Standard Class','Second Class','First Class','Same Day'];
+const QMAP={'01':'Q1','02':'Q1','03':'Q1','04':'Q2','05':'Q2','06':'Q2','07':'Q3','08':'Q3','09':'Q3','10':'Q4','11':'Q4','12':'Q4'};
+
+const C = {
+  blue:'#2563EB', blue2:'rgba(37,99,235,.12)',
+  green:'#059669', green2:'rgba(5,150,105,.12)',
+  amber:'#D97706', coral:'#DC4A3D',
+  teal:'#0D9488', purple:'#7C3AED',
+  gray:'#94A3B8'
+};
+
+let charts = {};
+
+function getKey() {
+  const yr = document.getElementById('f-year').value;
+  const reg = document.getElementById('f-reg').value;
+  const seg = document.getElementById('f-seg').value;
+  const cat = document.getElementById('f-cat').value;
+  const ship = document.getElementById('f-ship').value;
+  const risk = document.getElementById('f-risk').value;
+  // Build best-match key: prefer year+region combo if both set
+  const dims = [yr,reg,seg,cat,ship,risk];
+  const k = dims.join(':');
+  if (AGGS[k]) return k;
+  // Try year+one other
+  const nonAll = dims.map((v,i)=>v!=='a'?i:-1).filter(i=>i>=0);
+  if (nonAll.length===0) return 'a:a:a:a:a:a';
+  // Find best single or double match
+  for (let n=nonAll.length;n>=1;n--) {
+    const combo = getCombos(nonAll,n);
+    for (const c of combo) {
+      const testDims = ['a','a','a','a','a','a'];
+      c.forEach(i=>testDims[i]=dims[i]);
+      const testKey = testDims.join(':');
+      if (AGGS[testKey]) return testKey;
+    }
+  }
+  return 'a:a:a:a:a:a';
+}
+
+function getCombos(arr,n) {
+  if (n===1) return arr.map(x=>[x]);
+  if (n===arr.length) return [arr];
+  const result=[];
+  for (let i=0;i<=arr.length-n;i++) {
+    const rest=getCombos(arr.slice(i+1),n-1);
+    rest.forEach(c=>result.push([arr[i],...c]));
+  }
+  return result;
+}
+
+function fmt(n) {
+  if (Math.abs(n)>=1e6) return '$'+((n/1e6).toFixed(2))+'M';
+  if (Math.abs(n)>=1e3) return '$'+(Math.round(n/1e3))+'K';
+  return '$'+Math.round(n).toLocaleString();
+}
+function fmtN(n) { return Math.round(n).toLocaleString(); }
+function fmtPct(n) { return (+(n)).toFixed(2)+'%'; }
+
+function delta(val, ref, invert) {
+  if (!ref) return '';
+  const pct = ((val-ref)/Math.abs(ref)*100).toFixed(1);
+  const up = val >= ref;
+  const good = invert ? !up : up;
+  const arrow = up ? '▲' : '▼';
+  const cls = good ? 'up' : 'down';
+  return `<span class="kpi-delta ${cls}">${arrow} ${Math.abs(pct)}% vs All-Time</span>`;
+}
+
+function killChart(id) {
+  if(charts[id]) { charts[id].destroy(); delete charts[id]; }
+}
+function mkChart(id,cfg) {
+  killChart(id);
+  const ctx=document.getElementById(id);
+  if(!ctx) return;
+  charts[id]=new Chart(ctx,cfg);
+}
+
+function applyFilters() {
+  const key = getKey();
+  const d = AGGS[key] || AGGS['a:a:a:a:a:a'];
+  const all = AGGS['a:a:a:a:a:a'];
+
+  // Update filter info
+  document.getElementById('filter-info').textContent = key==='a:a:a:a:a:a' ? 'Showing all 10,194 records' : `Filtered view — key: ${key.replace(/a/g,'*')}`;
+
+  // KPIs
+  document.getElementById('k-sales').textContent = fmt(d.ts);
+  document.getElementById('k-profit').textContent = fmt(d.tp);
+  document.getElementById('k-margin').textContent = fmtPct(d.am);
+  document.getElementById('k-orders').textContent = fmtN(d.or);
+  document.getElementById('k-custs').textContent = fmtN(d.cu);
+  document.getElementById('k-loss').textContent = fmtN(d.lo);
+
+  const lossRate = d.lo && (d.or+d.lo) ? (d.lo/(d.or)*100).toFixed(1)+'%' : '—';
+
+  // KPI deltas (compare to all-time if filtered)
+  function setDelta(elId, val, ref, invert) {
+    const el=document.getElementById(elId);
+    if (!el) return;
+    if (key==='a:a:a:a:a:a') {el.innerHTML='<span class="kpi-delta neutral">Full period baseline</span>'; return;}
+    el.innerHTML=delta(val,ref,invert);
+  }
+  setDelta('k-sales-d',d.ts,all.ts/4); setDelta('k-profit-d',d.tp,all.tp/4);
+  setDelta('k-margin-d',d.am,all.am); setDelta('k-orders-d',d.or,all.or/4);
+  setDelta('k-custs-d',d.cu,all.cu); setDelta('k-loss-d',d.lo,all.lo/4,true);
+
+  // ── TREND CHART ──
+  const mo = d.mo || [];
+  const moLabels = mo.map(m=>{ const [y,mn]=m[0].split('-'); return ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][+mn-1]+' '+y.slice(2); });
+  mkChart('c-trend',{
+    type:'line',
+    data:{
+      labels:moLabels,
+      datasets:[
+        {label:'Sales',data:mo.map(m=>m[1]),borderColor:C.blue,backgroundColor:C.blue2,fill:true,tension:.4,pointRadius:0,borderWidth:2.5,pointHoverRadius:5},
+        {label:'Profit',data:mo.map(m=>m[2]),borderColor:C.green,backgroundColor:C.green2,fill:true,tension:.4,pointRadius:0,borderWidth:2,borderDash:[],pointHoverRadius:5}
+      ]
+    },
+    options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>ctx.dataset.label+': '+fmt(ctx.parsed.y)}}},
+      scales:{
+        x:{ticks:{font:{size:10},color:'#94A3B8',maxTicksLimit:16,maxRotation:0},grid:{display:false}},
+        y:{ticks:{callback:v=>fmt(v),font:{size:10},color:'#94A3B8'},grid:{color:'#F1F5F9'}}
+      }
+    }
+  });
+
+  // ── CATEGORY SALES ──
+  mkChart('c-cat-sales',{
+    type:'bar',
+    data:{labels:CATS,datasets:[{data:d.cs,backgroundColor:[C.amber,C.blue,C.purple],borderRadius:6,borderSkipped:false}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>fmt(ctx.parsed.y)}}},
+      scales:{x:{ticks:{font:{size:11},color:'#64748B'},grid:{display:false}},y:{ticks:{callback:v=>fmt(v),font:{size:10},color:'#94A3B8'},grid:{color:'#F1F5F9'}}}
+    }
+  });
+
+  // ── CATEGORY PROFIT ──
+  const cpColors=(d.cp||[]).map(v=>v<0?C.coral:C.teal);
+  mkChart('c-cat-profit',{
+    type:'bar',
+    data:{labels:CATS,datasets:[{data:d.cp,backgroundColor:cpColors,borderRadius:6,borderSkipped:false}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>fmt(ctx.parsed.y)}}},
+      scales:{x:{ticks:{font:{size:11},color:'#64748B'},grid:{display:false}},y:{ticks:{callback:v=>fmt(v),font:{size:10},color:'#94A3B8'},grid:{color:'#F1F5F9'}}}
+    }
+  });
+
+  // ── YEARLY ──
+  const yrColors=['#2563EB','#0D9488','#7C3AED','#059669'];
+  const yrD=d.yr||[];
+  mkChart('c-yearly',{
+    type:'bar',
+    data:{labels:YEARS,datasets:[{data:yrD.map(y=>y[1]),backgroundColor:yrColors,borderRadius:8,borderSkipped:false}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>fmt(ctx.parsed.y)}}},
+      scales:{x:{ticks:{font:{size:12,weight:'600'},color:'#475569'},grid:{display:false}},y:{ticks:{callback:v=>fmt(v),font:{size:10},color:'#94A3B8'},grid:{color:'#F1F5F9'}}}
+    }
+  });
+
+  // ── REGION DOUGHNUT ──
+  const regColors=['#2563EB','#059669','#D97706','#7C3AED'];
+  const regTotal=(d.rs||[]).reduce((a,b)=>a+b,0)||1;
+  mkChart('c-region',{
+    type:'doughnut',
+    data:{labels:REGIONS,datasets:[{data:d.rs,backgroundColor:regColors,borderWidth:0,hoverOffset:6}]},
+    options:{responsive:true,maintainAspectRatio:false,cutout:'65%',plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>REGIONS[ctx.dataIndex]+': '+fmt(ctx.parsed)+' ('+((ctx.parsed/regTotal*100).toFixed(1))+'%)' }}}}
+  });
+  const legReg=document.getElementById('leg-region');
+  legReg.innerHTML=REGIONS.map((r,i)=>`<div class="legend-item"><div class="legend-swatch" style="background:${regColors[i]}"></div><span style="min-width:70px">${r}</span><strong style="margin-left:4px">${(d.rs[i]/regTotal*100).toFixed(1)}%</strong></div>`).join('');
+
+  // ── SEGMENT DOUGHNUT ──
+  const segColors=['#2563EB','#D97706','#0D9488'];
+  const segTotal=(d.ss||[]).reduce((a,b)=>a+b,0)||1;
+  mkChart('c-seg',{
+    type:'doughnut',
+    data:{labels:SEGS,datasets:[{data:d.ss,backgroundColor:segColors,borderWidth:0,hoverOffset:6}]},
+    options:{responsive:true,maintainAspectRatio:false,cutout:'65%',plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>SEGS[ctx.dataIndex]+': '+fmt(ctx.parsed)+' ('+((ctx.parsed/segTotal*100).toFixed(1))+'%)' }}}}
+  });
+  const legSeg=document.getElementById('leg-seg');
+  legSeg.innerHTML=SEGS.map((s,i)=>`<div class="legend-item"><div class="legend-swatch" style="background:${segColors[i]}"></div><span style="min-width:95px">${s}</span><strong style="margin-left:4px">${(d.ss[i]/segTotal*100).toFixed(1)}%</strong></div>`).join('');
+
+  // ── SUB-CATEGORY HORIZONTAL BAR ──
+  const sc=d.sc||[];
+  const scLabels=sc.map(x=>x[0]);
+  const scVals=sc.map(x=>x[1]);
+  const scColors=scVals.map(v=>v<0?C.coral:C.teal);
+  const scHeight=Math.max(300,scLabels.length*28+60);
+  document.getElementById('c-subcat').parentElement.style.height=scHeight+'px';
+  mkChart('c-subcat',{
+    type:'bar',
+    data:{labels:scLabels,datasets:[{data:scVals,backgroundColor:scColors,borderRadius:4,indexAxis:'y'}]},
+    options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>fmt(ctx.parsed.x)}}},
+      scales:{
+        x:{ticks:{callback:v=>fmt(v),font:{size:10},color:'#94A3B8'},grid:{color:'#F1F5F9'}},
+        y:{ticks:{font:{size:11},color:'#475569'},grid:{display:false}}
+      }
+    }
+  });
+
+  // ── SHIP MODE ──
+  const shn=d.shn||[0,0,0,0]; const sha=d.sha||[0,0,0,0];
+  mkChart('c-ship',{
+    type:'bar',
+    data:{
+      labels:['Std Class','2nd Class','1st Class','Same Day'],
+      datasets:[
+        {label:'Order Count',data:shn,backgroundColor:C.blue,borderRadius:5,yAxisID:'y'},
+        {label:'Avg Sale',data:sha,type:'line',borderColor:C.amber,backgroundColor:'transparent',yAxisID:'y1',tension:.3,pointRadius:5,pointBackgroundColor:C.amber,borderWidth:2.5}
+      ]
+    },
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>ctx.dataset.label+': '+(ctx.dataset.label==='Order Count'?fmtN(ctx.parsed.y):fmt(ctx.parsed.y))}}},
+      scales:{
+        x:{ticks:{font:{size:11},color:'#475569'},grid:{display:false}},
+        y:{ticks:{font:{size:10},color:'#94A3B8'},grid:{color:'#F1F5F9'},title:{display:true,text:'Orders',font:{size:10},color:'#94A3B8'}},
+        y1:{position:'right',ticks:{callback:v=>fmt(v),font:{size:10},color:'#94A3B8'},grid:{drawOnChartArea:false},title:{display:true,text:'Avg $ / Order',font:{size:10},color:'#94A3B8'}}
+      }
+    }
+  });
+
+  // ── TOP 10 CUSTOMERS ──
+  const t10=d.t10||[];
+  const t10h=Math.max(200,t10.length*28+60);
+  document.getElementById('c-topcust').parentElement.style.height=t10h+'px';
+  mkChart('c-topcust',{
+    type:'bar',
+    data:{labels:t10.map(x=>x[0]),datasets:[{data:t10.map(x=>x[1]),backgroundColor:t10.map((_,i)=>i<3?C.amber:(i<5?C.blue:C.teal)),borderRadius:4,indexAxis:'y'}]},
+    options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>fmt(ctx.parsed.x)}}},
+      scales:{
+        x:{ticks:{callback:v=>fmt(v),font:{size:10},color:'#94A3B8'},grid:{color:'#F1F5F9'}},
+        y:{ticks:{font:{size:11},color:'#475569'},grid:{display:false}}
+      }
+    }
+  });
+
+  // ── RUNNING TOTAL ──
+  mkChart('c-running',{
+    type:'line',
+    data:{
+      labels:moLabels,
+      datasets:[{
+        label:'Cumulative Sales',data:mo.map(m=>m[3]),
+        borderColor:C.purple,backgroundColor:'rgba(124,58,237,.1)',
+        fill:true,tension:.4,pointRadius:0,borderWidth:2.5,pointHoverRadius:5
+      }]
+    },
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>fmt(ctx.parsed.y)}}},
+      scales:{
+        x:{ticks:{font:{size:10},color:'#94A3B8',maxTicksLimit:16,maxRotation:0},grid:{display:false}},
+        y:{ticks:{callback:v=>fmt(v),font:{size:10},color:'#94A3B8'},grid:{color:'#F1F5F9'}}
+      }
+    }
+  });
+
+  // ── RISK PIE ──
+  const ri=d.ri||[0,0];
+  const riTotal=ri[0]+ri[1]||1;
+  mkChart('c-risk',{
+    type:'pie',
+    data:{labels:['Safe','High Risk'],datasets:[{data:ri,backgroundColor:[C.green,C.coral],borderWidth:0,hoverOffset:6}]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>ctx.label+': '+fmtN(ctx.parsed)+' ('+(ctx.parsed/riTotal*100).toFixed(1)+'%)' }}}}
+  });
+  document.getElementById('leg-risk').innerHTML=[['Safe',C.green],['High Risk',C.coral]].map(([l,c],i)=>`<div class="legend-item"><div class="legend-swatch" style="background:${c}"></div>${l} — ${fmtN(ri[i])} (${(ri[i]/riTotal*100).toFixed(1)}%)</div>`).join('');
+
+
+  // ── REGION PROFIT BAR ──
+  const rpColors=(d.rp||[]).map(v=>v<0?C.coral:C.blue);
+  mkChart('c-reg-profit',{
+    type:'bar',
+    data:{labels:REGIONS,datasets:[{data:d.rp||[],backgroundColor:rpColors,borderRadius:6,borderSkipped:false}]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>fmt(ctx.parsed.y)}}},
+      scales:{x:{ticks:{font:{size:11},color:'#64748B'},grid:{display:false}},y:{ticks:{callback:v=>fmt(v),font:{size:10},color:'#94A3B8'},grid:{color:'#F1F5F9'}}}
+    }
+  });
+
+  // ── SALES vs PROFIT SCATTER ──
+  const scatterData=CATS.map((c,i)=>({
+    x:d.cs?Math.round(d.cs[i]):0,
+    y:d.cp?Math.round(d.cp[i]):0,
+    r:Math.max(8,Math.min(28,(d.cs&&d.cs[i]?d.cs[i]/50000:5)))
+  }));
+  const scatColors=[C.amber,C.blue,C.purple];
+  mkChart('c-scatter',{
+    type:'bubble',
+    data:{datasets:CATS.map((c,i)=>({label:c,data:[scatterData[i]],backgroundColor:scatColors[i]+'99',borderColor:scatColors[i],borderWidth:2}))},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{position:'bottom',labels:{font:{size:10},boxWidth:10,padding:10}},tooltip:{callbacks:{label:ctx=>`${ctx.dataset.label}: Sales ${fmt(ctx.parsed.x)}, Profit ${fmt(ctx.parsed.y)}`}}},
+      scales:{
+        x:{ticks:{callback:v=>fmt(v),font:{size:10},color:'#94A3B8'},grid:{color:'#F1F5F9'},title:{display:true,text:'Sales',font:{size:10},color:'#94A3B8'}},
+        y:{ticks:{callback:v=>fmt(v),font:{size:10},color:'#94A3B8'},grid:{color:'#F1F5F9'},title:{display:true,text:'Profit',font:{size:10},color:'#94A3B8'}}
+      }
+    }
+  });
+
+  // ── HEATMAP ──
+  buildHeatmap(d.qr||{});
+
+  // ── INSIGHTS ──
+  buildInsights(d, key);
+}
+
+function buildHeatmap(qr) {
+  const quarters=['Q1','Q2','Q3','Q4'];
+  const maxVal=Math.max(...Object.values(qr).map(Math.abs),1);
+  let html=`<table class="heatmap-table"><thead><tr><th>Region</th>${quarters.map(q=>`<th>${q}</th>`).join('')}</tr></thead><tbody>`;
+  REGIONS.forEach(r=>{
+    html+=`<tr><td class="row-label">${r}</td>`;
+    quarters.forEach(q=>{
+      const key=r+'_'+q; const val=qr[key]||0;
+      const intensity=val/maxVal;
+      const alpha=Math.max(0.05,Math.min(0.9,intensity));
+      const bg=val<0?`rgba(220,74,61,${alpha})`:`rgba(37,99,235,${alpha})`;
+      const txtC=intensity>0.6?'#fff':(val<0?'#7F1D1D':'#1E293B');
+      const borderC=val<0?'rgba(220,74,61,.3)':'rgba(37,99,235,.2)';
+      html+=`<td style="background:${bg};color:${txtC};border-color:${borderC};font-weight:${intensity>0.5?700:500}">${val>=0?'+':''}${Math.round(val/1000)}K</td>`;
+    });
+    html+='</tr>';
+  });
+  html+='</tbody></table>';
+  document.getElementById('heatmap-container').innerHTML=html;
+}
+
+function buildInsights(d, key) {
+  const sc=d.sc||[];
+  const best=sc[0]||['—',0]; const worst=sc[sc.length-1]||['—',0];
+  const rs=d.rs||[0,0,0,0]; const regTotal=rs.reduce((a,b)=>a+b,0)||1;
+  const topRegIdx=rs.indexOf(Math.max(...rs));
+  const topReg=REGIONS[topRegIdx];
+  const topRegPct=((rs[topRegIdx]/regTotal)*100).toFixed(1);
+  const lossRate=d.or>0?(d.lo/d.or*100).toFixed(1):0;
+  const riskPct=d.ri?((d.ri[1]/(d.ri[0]+d.ri[1]))*100).toFixed(1):'—';
+
+  document.getElementById('ins-top-region').textContent=topReg;
+  document.getElementById('ins-top-region-d').textContent=`${topRegPct}% of total revenue (${fmt(rs[topRegIdx])}). Consistently outperforms other regions.`;
+
+  document.getElementById('ins-best-sc').textContent=best[0];
+  document.getElementById('ins-best-sc-d').textContent=`Generates ${fmt(best[1])} net profit — highest-margin sub-category in portfolio.`;
+
+  document.getElementById('ins-worst-sc').textContent=worst[0];
+  document.getElementById('ins-worst-sc-d').textContent=`Net loss of ${fmt(Math.abs(worst[1]))}. CFO action required: review discount policy & pricing strategy.`;
+
+  document.getElementById('ins-loss-rate').textContent=lossRate+'%';
+  document.getElementById('ins-loss-rate-d').textContent=`${d.lo} of ${d.or} orders unprofitable. ${riskPct}% classified High Risk. Target: reduce below 8%.`;
+
+  // Update CFO alerts dynamically
+  const centralP=d.rp?d.rp[0]:null;
+  if(centralP!==null) {
+    const centralM=d.rs[0]?((d.rp[0]/d.rs[0])*100).toFixed(1):0;
+    document.getElementById('cfo-alert-2').textContent=`Central margin: ${centralM}% vs company avg ${d.am}%. Monitor discount frequency and product mix in Central region for margin recovery.`;
+  }
+
+  const t10=d.t10||[];
+  if(t10.length>0) {
+    const top3P=t10.slice(0,3).reduce((a,b)=>a+b[1],0);
+    document.getElementById('cfo-alert-4').textContent=`Top 3 customers (${t10.slice(0,3).map(x=>x[0]).join(', ')}) contribute ${fmt(top3P)} profit. Implement executive account management & loyalty tier for high-value clients.`;
+  }
+}
+
+function resetFilters() {
+  ['f-year','f-reg','f-seg','f-cat','f-ship','f-risk'].forEach(id=>document.getElementById(id).value='a');
+  applyFilters();
+}
+
+function onFilterChange() { applyFilters(); }
+
+// ── INIT ──
+document.addEventListener('DOMContentLoaded',()=>{
+  document.getElementById('current-date').textContent = new Date().toLocaleDateString('en-US',{weekday:'short',year:'numeric',month:'short',day:'numeric'});
+  setTimeout(()=>{
+    applyFilters();
+    document.getElementById('loading-overlay').style.display='none';
+  },300);
+});
+</script>
+</body>
+</html>
