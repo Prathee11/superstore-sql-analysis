@@ -1,4 +1,4 @@
-# 🏪 Superstore SQL Business Analytics
+# 🏪 Retail Profitability & Revenue Leakage Analysis
  
 Comprehensive retail analytics project using **SQL Server** to analyze 9,994 orders across 4 years, delivering actionable insights on revenue optimization, customer segmentation, and profit leakage identification.
  
