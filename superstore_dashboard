@@ -1,0 +1,412 @@
+import dash
+from dash import dcc, html, Input, Output
+import plotly.graph_objects as go
+import pandas as pd
+
+# ── Load & Prepare ─────────────────────────────────────────────────────────────
+df = pd.read_csv('orders.csv')
+df['Order Date'] = pd.to_datetime(df['Order Date'])
+df['Ship Date']  = pd.to_datetime(df['Ship Date'])
+df['Month']      = df['Order Date'].dt.to_period('M').astype(str)
+df['Year']       = df['Order Date'].dt.year
+df['Quarter']    = df['Order Date'].dt.to_period('Q').astype(str)
+
+# ── KPIs ───────────────────────────────────────────────────────────────────────
+total_sales     = df['Sales'].sum()
+total_profit    = df['Profit'].sum()
+profit_margin   = total_profit / total_sales * 100
+total_orders    = df['Order ID'].nunique()
+total_customers = df['Customer ID'].nunique()
+avg_order_val   = df.groupby('Order ID')['Sales'].sum().mean()
+
+# ── Aggregations ───────────────────────────────────────────────────────────────
+monthly  = df.groupby('Month').agg(sales=('Sales','sum'), profit=('Profit','sum')).round(2).reset_index()
+yearly   = df.groupby('Year').agg(sales=('Sales','sum')).round(2).reset_index()
+cat      = df.groupby('Category').agg(sales=('Sales','sum'), profit=('Profit','sum')).round(2).reset_index()
+subcat   = df.groupby('Sub-Category').agg(profit=('Profit','sum'), sales=('Sales','sum')).round(2).reset_index().sort_values('profit')
+reg      = df.groupby('Region').agg(sales=('Sales','sum'), profit=('Profit','sum')).round(2).reset_index()
+seg      = df.groupby('Segment').agg(sales=('Sales','sum')).round(2).reset_index()
+ship     = df.groupby('Ship Mode').agg(orders=('Order ID','nunique'), avg_sale=('Sales','mean')).round(2).reset_index()
+top_cust = df.groupby('Customer Name').agg(profit=('Profit','sum')).round(2).reset_index().nlargest(10,'profit')
+df['risk']= df['Discount'].apply(lambda x: 'High Risk' if x >= 0.5 else 'Safe')
+risk     = df.groupby('risk').size().reset_index(name='count')
+qreg     = df.groupby(['Quarter','Region'])['Profit'].sum().round(2).unstack().fillna(0)
+running  = monthly.copy(); running['cumulative'] = running['sales'].cumsum()
+scatter_df = df.groupby('Category').agg(sales=('Sales','sum'), profit=('Profit','sum'), orders=('Order ID','nunique')).reset_index()
+
+# ── Colors ─────────────────────────────────────────────────────────────────────
+BLUE  = '#2563EB'; RED   = '#DC2626'; GREEN = '#059669'
+AMBER = '#D97706'; PURP  = '#7C3AED'; TEAL  = '#0D9488'
+SLATE = '#1E293B'; GRAY  = '#64748B'; WHITE = '#FFFFFF'; BORDER = '#E2E8F0'
+FONT  = 'Inter, Segoe UI, sans-serif'
+NO_MB = {'displayModeBar': False}
+
+# Chart base — no margin, auto height
+B = dict(paper_bgcolor=WHITE, plot_bgcolor=WHITE,
+         font=dict(family=FONT, color=SLATE, size=9),
+         autosize=True)
+DM = dict(l=8, r=8, t=28, b=8)  # default margin
+
+def xa(grid=True): return dict(gridcolor=BORDER, linecolor=BORDER, tickfont=dict(color=GRAY, size=8), showgrid=grid)
+def ya(pre='$', grid=True): return dict(gridcolor=BORDER, linecolor=BORDER, tickfont=dict(color=GRAY, size=8), tickprefix=pre, showgrid=grid)
+
+# ── PAGE 1 CHARTS ──────────────────────────────────────────────────────────────
+fig_trend = go.Figure()
+fig_trend.add_trace(go.Scatter(x=monthly['Month'], y=monthly['sales'],
+    fill='tozeroy', fillcolor='rgba(37,99,235,0.08)',
+    line=dict(color=BLUE, width=1.5), name='Sales',
+    hovertemplate='%{x}<br>$%{y:,.0f}<extra></extra>'))
+fig_trend.add_trace(go.Scatter(x=monthly['Month'], y=monthly['profit'],
+    line=dict(color=GREEN, width=1.5, dash='dot'), name='Profit',
+    hovertemplate='%{x}<br>$%{y:,.0f}<extra></extra>'))
+fig_trend.update_layout(**B, margin=DM,
+    title=dict(text='Monthly Sales & Profit', font=dict(size=10, color=SLATE), x=0),
+    legend=dict(orientation='h', y=1.18, x=1, xanchor='right', font=dict(size=8)))
+fig_trend.update_xaxes(**xa(False), tickangle=45, nticks=12)
+fig_trend.update_yaxes(**ya())
+
+fig_yearly = go.Figure(go.Bar(
+    x=yearly['Year'].astype(str), y=yearly['sales'],
+    marker=dict(color=[BLUE,BLUE,BLUE,GREEN], line_width=0),
+    text=[f'${v/1e6:.2f}M' for v in yearly['sales']],
+    textposition='outside', textfont=dict(size=9), width=0.5))
+fig_yearly.update_layout(**B, margin=DM,
+    title=dict(text='Yearly Sales Growth', font=dict(size=10, color=SLATE), x=0), bargap=0.4)
+fig_yearly.update_xaxes(**xa(False))
+fig_yearly.update_yaxes(**ya())
+
+# ── PAGE 2 CHARTS ──────────────────────────────────────────────────────────────
+fig_cat_s = go.Figure(go.Bar(
+    x=cat['Category'], y=cat['sales'],
+    marker=dict(color=[BLUE,TEAL,PURP], line_width=0),
+    text=[f'${v/1e3:.0f}K' for v in cat['sales']],
+    textposition='outside', textfont=dict(size=9), width=0.5))
+fig_cat_s.update_layout(**B, margin=DM,
+    title=dict(text='Sales by Category', font=dict(size=10, color=SLATE), x=0), bargap=0.4)
+fig_cat_s.update_xaxes(**xa(False))
+fig_cat_s.update_yaxes(**ya())
+
+fig_cat_p = go.Figure(go.Bar(
+    x=cat['Category'], y=cat['profit'],
+    marker=dict(color=[GREEN if v>0 else RED for v in cat['profit']], line_width=0),
+    text=[f'${v/1e3:.0f}K' for v in cat['profit']],
+    textposition='outside', textfont=dict(size=9), width=0.5))
+fig_cat_p.update_layout(**B, margin=DM,
+    title=dict(text='Profit by Category', font=dict(size=10, color=SLATE), x=0), bargap=0.4)
+fig_cat_p.update_xaxes(**xa(False))
+fig_cat_p.update_yaxes(**ya())
+
+fig_sub = go.Figure(go.Bar(
+    x=subcat['profit'], y=subcat['Sub-Category'], orientation='h',
+    marker=dict(color=[RED if v<0 else BLUE for v in subcat['profit']], line_width=0),
+    text=[f'${v:,.0f}' for v in subcat['profit']],
+    textposition='outside', textfont=dict(size=8)))
+fig_sub.update_layout(**B, margin=dict(l=8, r=50, t=28, b=8),
+    title=dict(text='Sub-Category Profit — Red = Loss', font=dict(size=10, color=SLATE), x=0))
+fig_sub.update_xaxes(**xa(), tickprefix='$')
+fig_sub.update_yaxes(gridcolor='rgba(0,0,0,0)', linecolor=BORDER, tickfont=dict(color=SLATE, size=8), showgrid=False)
+
+seg_c = [BLUE, GREEN, AMBER]
+fig_scatter = go.Figure()
+for i, row in scatter_df.iterrows():
+    fig_scatter.add_trace(go.Scatter(
+        x=[row['sales']], y=[row['profit']], mode='markers+text',
+        marker=dict(size=row['orders']/20, color=seg_c[i], opacity=0.8, line=dict(width=1, color=WHITE)),
+        text=[row['Category']], textposition='top center', textfont=dict(size=8),
+        name=row['Category'],
+        hovertemplate=f"<b>{row['Category']}</b><br>${row['sales']:,.0f}<br>${row['profit']:,.0f}<extra></extra>"))
+fig_scatter.update_layout(**B, margin=DM, showlegend=False,
+    title=dict(text='Sales vs Profit Bubble', font=dict(size=10, color=SLATE), x=0))
+fig_scatter.update_xaxes(**xa(), tickprefix='$')
+fig_scatter.update_yaxes(**ya())
+
+# ── PAGE 3 CHARTS ──────────────────────────────────────────────────────────────
+fig_reg_d = go.Figure(go.Pie(
+    labels=reg['Region'], values=reg['sales'], hole=0.55,
+    marker=dict(colors=[BLUE,GREEN,AMBER,PURP], line=dict(color=WHITE, width=2)),
+    textinfo='percent+label', textfont=dict(size=9)))
+fig_reg_d.update_layout(**B, margin=DM, showlegend=False,
+    title=dict(text='Sales by Region', font=dict(size=10, color=SLATE), x=0))
+
+fig_seg_d = go.Figure(go.Pie(
+    labels=seg['Segment'], values=seg['sales'], hole=0.55,
+    marker=dict(colors=[TEAL,PURP,AMBER], line=dict(color=WHITE, width=2)),
+    textinfo='percent+label', textfont=dict(size=9)))
+fig_seg_d.update_layout(**B, margin=DM, showlegend=False,
+    title=dict(text='Sales by Segment', font=dict(size=10, color=SLATE), x=0))
+
+fig_reg_p = go.Figure(go.Bar(
+    x=reg['Region'], y=reg['profit'],
+    marker=dict(color=[BLUE,GREEN,AMBER,PURP], line_width=0),
+    text=[f'${v/1e3:.0f}K' for v in reg['profit']],
+    textposition='outside', textfont=dict(size=9), width=0.5))
+fig_reg_p.update_layout(**B, margin=DM,
+    title=dict(text='Profit by Region', font=dict(size=10, color=SLATE), x=0), bargap=0.4)
+fig_reg_p.update_xaxes(**xa(False))
+fig_reg_p.update_yaxes(**ya())
+
+fig_cust = go.Figure(go.Bar(
+    x=top_cust['profit'], y=top_cust['Customer Name'], orientation='h',
+    marker=dict(color=BLUE, opacity=0.85, line_width=0),
+    text=[f'${v:,.0f}' for v in top_cust['profit']],
+    textposition='outside', textfont=dict(size=8)))
+fig_cust.update_layout(**B, margin=dict(l=8, r=50, t=28, b=8),
+    title=dict(text='Top 10 Customers by Profit', font=dict(size=10, color=SLATE), x=0))
+fig_cust.update_xaxes(**xa(), tickprefix='$')
+fig_cust.update_yaxes(gridcolor='rgba(0,0,0,0)', linecolor=BORDER, tickfont=dict(color=SLATE, size=8), showgrid=False)
+
+# ── PAGE 4 CHARTS ──────────────────────────────────────────────────────────────
+fig_ship = go.Figure()
+fig_ship.add_trace(go.Bar(x=ship['Ship Mode'], y=ship['orders'],
+    marker=dict(color=BLUE, opacity=0.8, line_width=0), name='Orders', yaxis='y', width=0.4))
+fig_ship.add_trace(go.Scatter(x=ship['Ship Mode'], y=ship['avg_sale'],
+    mode='lines+markers', name='Avg Sale',
+    line=dict(color=AMBER, width=2), marker=dict(size=6, color=AMBER), yaxis='y2'))
+fig_ship.update_layout(**B, margin=DM,
+    title=dict(text='Ship Mode — Volume vs Avg Sale', font=dict(size=10, color=SLATE), x=0),
+    yaxis=dict(gridcolor=BORDER, linecolor=BORDER, tickfont=dict(color=GRAY, size=8), showgrid=True),
+    yaxis2=dict(overlaying='y', side='right', tickfont=dict(color=AMBER, size=8), tickprefix='$', showgrid=False),
+    legend=dict(orientation='h', y=1.18, x=1, xanchor='right', font=dict(size=8)),
+    xaxis=dict(gridcolor=BORDER, linecolor=BORDER, tickfont=dict(color=SLATE, size=8), showgrid=False),
+    bargap=0.4)
+
+fig_risk = go.Figure(go.Pie(
+    labels=risk['risk'], values=risk['count'], hole=0.55,
+    marker=dict(colors=[RED, GREEN], line=dict(color=WHITE, width=2)),
+    textinfo='percent+label', textfont=dict(size=9)))
+fig_risk.update_layout(**B, margin=DM, showlegend=False,
+    title=dict(text='Discount Risk', font=dict(size=10, color=SLATE), x=0))
+
+fig_run = go.Figure(go.Scatter(
+    x=running['Month'], y=running['cumulative'],
+    fill='tozeroy', fillcolor='rgba(5,150,105,0.08)',
+    line=dict(color=GREEN, width=2),
+    hovertemplate='%{x}<br>$%{y:,.0f}<extra></extra>'))
+fig_run.update_layout(**B, margin=DM,
+    title=dict(text='Cumulative Sales Growth', font=dict(size=10, color=SLATE), x=0))
+fig_run.update_xaxes(**xa(False), tickangle=45, nticks=12)
+fig_run.update_yaxes(**ya())
+
+fig_heat = go.Figure(go.Heatmap(
+    z=qreg.values, x=qreg.columns.tolist(), y=qreg.index.tolist(),
+    colorscale=[[0,'#FEE2E2'],[0.4,'#FEF9C3'],[0.7,'#DCFCE7'],[1,'#059669']],
+    text=[[f'${v:,.0f}' for v in row] for row in qreg.values],
+    texttemplate='<b>%{text}</b>', textfont=dict(size=7, family=FONT),
+    showscale=True,
+    colorbar=dict(tickfont=dict(color=GRAY, size=7), outlinewidth=0, len=0.8, thickness=8, tickprefix='$')))
+fig_heat.update_layout(**B, margin=dict(l=8, r=50, t=28, b=8),
+    title=dict(text='Quarterly Profit by Region', font=dict(size=10, color=SLATE), x=0))
+fig_heat.update_xaxes(gridcolor='rgba(0,0,0,0)', linecolor=BORDER, tickfont=dict(color=SLATE, size=8), showgrid=False)
+fig_heat.update_yaxes(gridcolor='rgba(0,0,0,0)', linecolor=BORDER, tickfont=dict(color=SLATE, size=7), showgrid=False)
+
+# ── APP ────────────────────────────────────────────────────────────────────────
+app = dash.Dash(__name__)
+
+app.index_string = '''<!DOCTYPE html>
+<html>
+<head>
+    {%metas%}
+    <title>Superstore Dashboard</title>
+    {%favicon%}
+    {%css%}
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { box-sizing:border-box; margin:0; padding:0; }
+        html, body { width:100%; height:100vh; overflow:hidden; background:#F8FAFC; font-family:'Inter','Segoe UI',sans-serif; }
+
+        .canvas {
+            width:100%; height:100vh;
+            display:flex; flex-direction:column;
+            padding:8px 10px; gap:6px; overflow:hidden;
+            background:#F8FAFC;
+        }
+
+        /* Header */
+        .header { flex-shrink:0; height:44px; display:flex; align-items:center; justify-content:space-between; background:#fff; border-radius:8px; padding:0 14px; border:1px solid #E2E8F0; }
+        .header-left { display:flex; align-items:center; gap:8px; }
+        .accent-bar { width:3px; height:24px; background:linear-gradient(180deg,#2563EB,#7C3AED); border-radius:3px; }
+        .h-title { font-size:13px; font-weight:700; color:#1E293B; }
+        .h-sub { font-size:9px; color:#94A3B8; margin-top:1px; }
+        .header-right { display:flex; gap:5px; }
+        .badge { font-size:9px; font-weight:600; padding:3px 8px; border-radius:20px; }
+        .b-blue  { background:#EFF6FF; color:#2563EB; border:1px solid #BFDBFE; }
+        .b-green { background:#F0FDF4; color:#16A34A; border:1px solid #BBF7D0; }
+
+        /* Nav */
+        .nav-bar { flex-shrink:0; height:32px; display:flex; gap:3px; align-items:center; background:#fff; border-radius:8px; padding:0 8px; border:1px solid #E2E8F0; }
+        .nav-btn { font-size:10px; font-weight:600; padding:4px 12px; border-radius:6px; cursor:pointer; border:none; background:transparent; color:#64748B; transition:all 0.15s; }
+        .nav-btn:hover { background:#F1F5F9; color:#1E293B; }
+        .nav-btn.active { background:#EFF6FF; color:#2563EB; }
+        .nav-div { width:1px; height:16px; background:#E2E8F0; margin:0 2px; }
+
+        /* Pages */
+        .page { display:none; flex:1; min-height:0; overflow:hidden; }
+        .page.active { display:grid; }
+
+        /* KPI cards */
+        .kpi-row { display:grid; grid-template-columns:repeat(6,1fr); gap:6px; }
+        .kpi-card { background:#fff; border:1px solid #E2E8F0; border-radius:8px; padding:8px 10px; position:relative; overflow:hidden; }
+        .kpi-card::before { content:''; position:absolute; top:0; left:0; right:0; height:2px; border-radius:8px 8px 0 0; }
+        .kc-blue::before   { background:#2563EB; }
+        .kc-green::before  { background:#059669; }
+        .kc-amber::before  { background:#D97706; }
+        .kc-teal::before   { background:#0D9488; }
+        .kc-purple::before { background:#7C3AED; }
+        .kc-coral::before  { background:#DC2626; }
+        .kpi-label { font-size:8px; font-weight:600; color:#94A3B8; text-transform:uppercase; letter-spacing:0.8px; margin-bottom:2px; }
+        .kpi-value { font-size:16px; font-weight:700; line-height:1; }
+        .kc-blue   .kpi-value { color:#2563EB; }
+        .kc-green  .kpi-value { color:#059669; }
+        .kc-amber  .kpi-value { color:#D97706; }
+        .kc-teal   .kpi-value { color:#0D9488; }
+        .kc-purple .kpi-value { color:#7C3AED; }
+        .kc-coral  .kpi-value { color:#DC2626; }
+        .kpi-sub { font-size:8px; color:#94A3B8; margin-top:2px; }
+
+        .chart-card { background:#fff; border:1px solid #E2E8F0; border-radius:8px; padding:3px; overflow:hidden; min-height:0; }
+
+        /* Page 1 */
+        .p1 { grid-template-rows:58px 1fr; gap:6px; }
+        .p1-charts { display:grid; grid-template-columns:1fr 1fr; gap:6px; min-height:0; height:100%; }
+
+        /* Page 2 */
+        .p2 { grid-template-columns:1fr 1fr; grid-template-rows:1fr 1fr; gap:6px; }
+
+        /* Page 3 */
+        .p3 { grid-template-rows:45% 55%; gap:6px; }
+        .p3-top { display:grid; grid-template-columns:1fr 1fr 1fr; gap:6px; height:100%; }
+
+        /* Page 4 */
+        .p4 { grid-template-columns:1fr 1fr; grid-template-rows:1fr 1fr; gap:6px; }
+
+        /* Alerts */
+        .alerts-wrap { padding:6px 8px; display:flex; flex-direction:column; gap:5px; height:100%; }
+        .alert-card { border-radius:6px; padding:7px 10px; display:flex; gap:6px; align-items:flex-start; }
+        .alert-card.warn    { background:#FFFBEB; border:1px solid #FDE68A; }
+        .alert-card.danger  { background:#FEF2F2; border:1px solid #FECACA; }
+        .alert-card.info    { background:#EFF6FF; border:1px solid #BFDBFE; }
+        .alert-card.success { background:#ECFDF5; border:1px solid #A7F3D0; }
+        .alert-title { font-size:10px; font-weight:700; color:#1E293B; margin-bottom:1px; }
+        .alert-desc  { font-size:9px; color:#475569; line-height:1.4; }
+        .alert-icon  { font-size:14px; flex-shrink:0; margin-top:1px; }
+        .alerts-title { font-size:10px; font-weight:700; color:#1E293B; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:4px; padding:0 2px; }
+
+        .modebar-container { display:none !important; }
+        .footer { flex-shrink:0; text-align:center; font-size:8px; color:#CBD5E1; letter-spacing:1px; }
+    </style>
+</head>
+<body>
+    {%app_entry%}
+    <footer>{%config%}{%scripts%}{%renderer%}</footer>
+</body>
+</html>'''
+
+G = {'style': {'height': '100%', 'width': '100%'}}
+
+app.layout = html.Div(className='canvas', children=[
+
+    # Header
+    html.Div(className='header', children=[
+        html.Div(className='header-left', children=[
+            html.Div(className='accent-bar'),
+            html.Div([
+                html.Div('Superstore Executive Command Center', className='h-title'),
+                html.Div('10,194 Orders · 804 Customers · 2023–2026 · SQL + Python', className='h-sub'),
+            ]),
+        ]),
+
+    ]),
+
+    # Navigator
+    html.Div(className='nav-bar', children=[
+        html.Button('📊 Overview',           id='nav-1', className='nav-btn active', n_clicks=0),
+        html.Div(className='nav-div'),
+        html.Button('📦 Sales & Product',    id='nav-2', className='nav-btn', n_clicks=0),
+        html.Div(className='nav-div'),
+        html.Button('👥 Customers & Region', id='nav-3', className='nav-btn', n_clicks=0),
+        html.Div(className='nav-div'),
+        html.Button('🚚 Operations',          id='nav-4', className='nav-btn', n_clicks=0),
+    ]),
+
+    # ── Page 1 — Overview ──────────────────────────────────────────────────────
+    html.Div(id='page-1', className='page p1 active', children=[
+        html.Div(className='kpi-row', children=[
+            html.Div(className='kpi-card kc-blue',   children=[html.Div('Total Revenue',  className='kpi-label'), html.Div(f'${total_sales/1e6:.2f}M', className='kpi-value'), html.Div('Gross sales', className='kpi-sub')]),
+            html.Div(className='kpi-card kc-green',  children=[html.Div('Total Profit',   className='kpi-label'), html.Div(f'${total_profit/1e3:.0f}K', className='kpi-value'), html.Div('Net profit',  className='kpi-sub')]),
+            html.Div(className='kpi-card kc-amber',  children=[html.Div('Profit Margin',  className='kpi-label'), html.Div(f'{profit_margin:.1f}%',      className='kpi-value'), html.Div('Blended',    className='kpi-sub')]),
+            html.Div(className='kpi-card kc-teal',   children=[html.Div('Total Orders',   className='kpi-label'), html.Div(f'{total_orders:,}',           className='kpi-value'), html.Div('Unique IDs', className='kpi-sub')]),
+            html.Div(className='kpi-card kc-purple', children=[html.Div('Customers',      className='kpi-label'), html.Div(f'{total_customers:,}',        className='kpi-value'), html.Div('Unique',     className='kpi-sub')]),
+            html.Div(className='kpi-card kc-coral',  children=[html.Div('Avg Order Value',className='kpi-label'), html.Div(f'${avg_order_val:.0f}',       className='kpi-value'), html.Div('Per order',  className='kpi-sub')]),
+        ]),
+        html.Div(className='p1-charts', children=[
+            html.Div(className='chart-card', children=[dcc.Graph(figure=fig_trend,  config=NO_MB, **G)]),
+            html.Div(className='chart-card', children=[dcc.Graph(figure=fig_yearly, config=NO_MB, **G)]),
+        ]),
+    ]),
+
+    # ── Page 2 — Sales & Product ───────────────────────────────────────────────
+    html.Div(id='page-2', className='page p2', children=[
+        html.Div(className='chart-card', children=[dcc.Graph(figure=fig_cat_s, config=NO_MB, **G)]),
+        html.Div(className='chart-card', children=[dcc.Graph(figure=fig_cat_p, config=NO_MB, **G)]),
+        html.Div(className='chart-card', children=[dcc.Graph(figure=fig_sub,   config=NO_MB, **G)]),
+        html.Div(className='chart-card', children=[dcc.Graph(figure=fig_scatter,config=NO_MB, **G)]),
+    ]),
+
+    # ── Page 3 — Customers & Region ───────────────────────────────────────────
+    html.Div(id='page-3', className='page p3', children=[
+        html.Div(className='p3-top', children=[
+            html.Div(className='chart-card', children=[dcc.Graph(figure=fig_reg_d, config=NO_MB, **G)]),
+            html.Div(className='chart-card', children=[dcc.Graph(figure=fig_seg_d, config=NO_MB, **G)]),
+            html.Div(className='chart-card', children=[dcc.Graph(figure=fig_reg_p, config=NO_MB, **G)]),
+        ]),
+        html.Div(className='chart-card', children=[dcc.Graph(figure=fig_cust, config=NO_MB, **G)]),
+    ]),
+
+    # ── Page 4 — Operations ───────────────────────────────────────────────────
+    html.Div(id='page-4', className='page p4', children=[
+        html.Div(className='chart-card', children=[dcc.Graph(figure=fig_ship, config=NO_MB, **G)]),
+        html.Div(className='chart-card', children=[dcc.Graph(figure=fig_risk, config=NO_MB, **G)]),
+        html.Div(className='chart-card', children=[dcc.Graph(figure=fig_run,  config=NO_MB, **G)]),
+        html.Div(className='chart-card', children=[
+            html.Div(className='alerts-wrap', children=[
+                html.Div('Action Alerts', className='alerts-title'),
+                html.Div(className='alert-card danger', children=[
+                    html.Span('🚨', className='alert-icon'),
+                    html.Div([html.Div('Tables & Bookcases Losing Money', className='alert-title'),
+                              html.Div('Tables: -$17.7K, Bookcases: -$3.6K. Discount-driven losses. CFO action required.', className='alert-desc')])]),
+                html.Div(className='alert-card warn', children=[
+                    html.Span('⚠️', className='alert-icon'),
+                    html.Div([html.Div('Central Region Below Avg Margin', className='alert-title'),
+                              html.Div('Central = 7.9% vs West = 15.0%. Review pricing strategy.', className='alert-desc')])]),
+                html.Div(className='alert-card info', children=[
+                    html.Span('💡', className='alert-icon'),
+                    html.Div([html.Div('Technology Drives Highest Profit', className='alert-title'),
+                              html.Div('Technology = $147K profit. Copiers sub-cat = $56K alone.', className='alert-desc')])]),
+                html.Div(className='alert-card success', children=[
+                    html.Span('✅', className='alert-icon'),
+                    html.Div([html.Div('2026 On Track for Record Sales', className='alert-title'),
+                              html.Div('2026 YTD on pace to exceed 2025 full-year by 21%.', className='alert-desc')])]),
+            ]),
+        ]),
+    ]),
+
+
+])
+
+@app.callback(
+    [Output('page-1','className'), Output('page-2','className'),
+     Output('page-3','className'), Output('page-4','className'),
+     Output('nav-1','className'),  Output('nav-2','className'),
+     Output('nav-3','className'),  Output('nav-4','className')],
+    [Input('nav-1','n_clicks'), Input('nav-2','n_clicks'),
+     Input('nav-3','n_clicks'), Input('nav-4','n_clicks')]
+)
+def switch_page(n1, n2, n3, n4):
+    ctx = dash.callback_context
+    active = '1' if not ctx.triggered else ctx.triggered[0]['prop_id'].split('.')[0].split('-')[1]
+    pc = {str(i): f'page p{i}{" active" if str(i)==active else ""}' for i in range(1,5)}
+    nc = {str(i): f'nav-btn{" active" if str(i)==active else ""}' for i in range(1,5)}
+    return pc['1'],pc['2'],pc['3'],pc['4'],nc['1'],nc['2'],nc['3'],nc['4']
+
+if __name__ == '__main__':
+    app.run(debug=True, dev_tools_ui=False, dev_tools_props_check=False)

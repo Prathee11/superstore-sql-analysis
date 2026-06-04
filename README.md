@@ -96,10 +96,10 @@ Built with Plotly Dash, fully responsive, fits any browser window without zoomin
 ![Overview](screenshots/01_overview.png)
 
 ### Page 2 — Sales & Product
-![Sales & Product](screenshots/02_sales and products.png)
+![Sales & Product](screenshots/02_sales_and_products.png)
 
 ### Page 3 — Customers & Region
-![Customers & Region](screenshots/03_customers and region.png)
+![Customers & Region](screenshots/03_customers_and_region.png)
 
 ### Page 4 — Operations
 ![Operations](screenshots/04_operations.png)
